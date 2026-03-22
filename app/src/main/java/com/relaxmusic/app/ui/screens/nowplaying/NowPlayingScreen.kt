@@ -30,7 +30,6 @@ import androidx.compose.material.icons.rounded.Loop
 import androidx.compose.material.icons.rounded.PauseCircle
 import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.rounded.QueueMusic
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -331,7 +330,7 @@ private fun LyricsContent(
             Text(
                 text = line.text,
                 color = if (index == currentLyricIndex) colors.accent else colors.textSecondary,
-                style = if (index == currentLyricIndex) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.bodyLarge,
+                style = if (index == currentLyricIndex) MaterialTheme.typography.titleLarge else MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center
             )
@@ -354,11 +353,11 @@ private fun NoLyricsContent(
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("无歌词", style = MaterialTheme.typography.headlineMedium, color = colors.accent)
+            Text("暂无歌词", style = MaterialTheme.typography.titleMedium, color = colors.accent)
             Text(
                 text = currentSong?.let { "当前歌曲未找到本地歌词" } ?: "当前没有歌曲",
                 color = colors.textSecondary,
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center
             )
         }
@@ -374,7 +373,7 @@ private fun TrackMetaSection(
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(
             text = currentSong?.title ?: "还没有开始播放",
-            style = MaterialTheme.typography.headlineMedium,
+            style = MaterialTheme.typography.titleLarge,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.fillMaxWidth().then(
@@ -384,7 +383,7 @@ private fun TrackMetaSection(
         Text(
             text = currentSong?.let { "${it.artist} · ${it.album}" } ?: "从曲库中选择一首歌开始",
             color = colors.textSecondary,
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.bodyMedium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.fillMaxWidth()
@@ -431,15 +430,12 @@ private fun PlaybackControlsSection(
     onOpenTimer: () -> Unit
 ) {
     val colors = RelaxMusicColors
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
+            horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onCyclePlayMode) {
-                Icon(Icons.Rounded.Loop, contentDescription = "play mode")
-            }
             IconButton(onClick = onPrevious) {
                 Icon(Icons.Rounded.FastRewind, contentDescription = "previous")
             }
@@ -452,14 +448,64 @@ private fun PlaybackControlsSection(
             IconButton(onClick = onNext) {
                 Icon(Icons.Rounded.FastForward, contentDescription = "next")
             }
-            IconButton(onClick = onOpenQueue) {
-                Icon(Icons.Rounded.QueueMusic, contentDescription = "queue")
-            }
-            Button(onClick = onOpenTimer) {
-                Text(formatSleepTimerRemainingButtonLabel(sleepTimerRemaining))
-            }
         }
 
-        Text("播放模式: ${playModeLabel(playMode.name)}", color = colors.textSecondary)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            UtilityActionCard(
+                title = playModeLabel(playMode.name),
+                icon = { Icon(Icons.Rounded.Loop, contentDescription = "play mode") },
+                onClick = onCyclePlayMode,
+                modifier = Modifier.weight(1f)
+            )
+            UtilityActionCard(
+                title = "播放队列",
+                icon = { Icon(Icons.Rounded.QueueMusic, contentDescription = "queue") },
+                onClick = onOpenQueue,
+                modifier = Modifier.weight(1f)
+            )
+            UtilityActionCard(
+                title = formatSleepTimerRemainingButtonLabel(sleepTimerRemaining),
+                icon = { Icon(Icons.Rounded.Bedtime, contentDescription = "timer") },
+                onClick = onOpenTimer,
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        Text("播放模式: ${playModeLabel(playMode.name)}", color = colors.textSecondary, style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+@Composable
+private fun UtilityActionCard(
+    title: String,
+    icon: @Composable () -> Unit,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colors = RelaxMusicColors
+    Card(
+        modifier = modifier.clickable(onClick = onClick),
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(1.dp, colors.panelBorder),
+        colors = CardDefaults.cardColors(containerColor = colors.panelSurface)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            icon()
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
