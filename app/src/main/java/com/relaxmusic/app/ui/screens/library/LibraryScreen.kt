@@ -49,7 +49,7 @@ fun LibraryScreen(
     onPickFolder: () -> Unit,
     onRemoveFolder: (String) -> Unit,
     onRescan: () -> Unit,
-    onOpenFullLibrary: () -> Unit,
+    onOpenLibrary: () -> Unit,
     onOpenAlbums: () -> Unit,
     onOpenArtists: () -> Unit,
     onOpenPlaylists: () -> Unit,
@@ -173,7 +173,7 @@ fun LibraryScreen(
                 title = dashboardModel.libraryEntryTitle,
                 subtitle = dashboardModel.libraryEntrySubtitle,
                 icon = { Icon(Icons.Rounded.MusicNote, contentDescription = "full library", tint = colors.accent) },
-                onClick = onOpenFullLibrary,
+                onClick = onOpenLibrary,
                 modifier = Modifier.fillMaxWidth()
             )
         }

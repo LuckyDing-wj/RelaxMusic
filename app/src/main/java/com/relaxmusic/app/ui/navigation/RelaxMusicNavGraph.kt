@@ -85,7 +85,7 @@ fun RelaxMusicNavGraph(
                 onPickFolder = onPickFolder,
                 onRemoveFolder = libraryViewModel::removeFolder,
                 onRescan = libraryViewModel::rescan,
-                onOpenFullLibrary = { navController.navigate(RelaxMusicDestination.FullLibrary.route) },
+                onOpenLibrary = { navigateToTopLevel(TopLevelDestination.LIBRARY) },
                 onOpenAlbums = { navController.navigate(RelaxMusicDestination.Albums.route) },
                 onOpenArtists = { navController.navigate(RelaxMusicDestination.Artists.route) },
                 onOpenPlaylists = { navController.navigate(RelaxMusicDestination.Playlists.route) },
