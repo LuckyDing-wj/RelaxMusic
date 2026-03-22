@@ -35,8 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.relaxmusic.app.domain.model.Playlist
-import com.relaxmusic.app.ui.theme.Accent
-import com.relaxmusic.app.ui.theme.TextSecondary
+import com.relaxmusic.app.ui.theme.RelaxMusicColors
 
 @Composable
 fun PlaylistsScreen(
@@ -48,6 +47,7 @@ fun PlaylistsScreen(
     showBackButton: Boolean = true,
     onOpenPlaylist: (Playlist) -> Unit
 ) {
+    val colors = RelaxMusicColors
     var creating by remember { mutableStateOf(false) }
     var playlistName by remember { mutableStateOf("") }
     var editingPlaylist by remember { mutableStateOf<Playlist?>(null) }
@@ -76,7 +76,7 @@ fun PlaylistsScreen(
         Text("歌单", style = MaterialTheme.typography.headlineMedium)
 
         if (playlists.isEmpty()) {
-            Text("还没有歌单，先创建一个吧。", color = TextSecondary)
+            Text("还没有歌单，先创建一个吧。", color = colors.textSecondary)
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -87,7 +87,7 @@ fun PlaylistsScreen(
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(18.dp),
-                        colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.72f)),
+                        colors = CardDefaults.cardColors(containerColor = colors.panelSurface),
                         onClick = { onOpenPlaylist(playlist) }
                     ) {
                         Row(
@@ -97,10 +97,10 @@ fun PlaylistsScreen(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Icon(Icons.Rounded.LibraryMusic, contentDescription = "playlist", tint = Accent)
+                                Icon(Icons.Rounded.LibraryMusic, contentDescription = "playlist", tint = colors.accent)
                                 Column {
                                     Text(playlist.name, style = MaterialTheme.typography.titleMedium)
-                                    Text("${playlist.songCount} 首歌曲", color = TextSecondary)
+                                    Text("${playlist.songCount} 首歌曲", color = colors.textSecondary)
                                 }
                             }
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {

@@ -20,6 +20,21 @@ class PlayerViewModel(
     var uiState by mutableStateOf(PlayerUiState())
         private set
 
+    var nowPlayingArtworkUiState by mutableStateOf(NowPlayingArtworkUiState())
+        private set
+
+    var nowPlayingLyricsUiState by mutableStateOf(NowPlayingLyricsUiState())
+        private set
+
+    var nowPlayingTrackUiState by mutableStateOf(NowPlayingTrackUiState())
+        private set
+
+    var nowPlayingProgressUiState by mutableStateOf(NowPlayingProgressUiState())
+        private set
+
+    var nowPlayingControlsUiState by mutableStateOf(NowPlayingControlsUiState())
+        private set
+
     var miniPlayerSong by mutableStateOf<Song?>(null)
         private set
 
@@ -35,16 +50,13 @@ class PlayerViewModel(
         viewModelScope.launch {
             playerRepository.playbackState.collectLatest { state ->
                 val sleepRemaining = uiState.sleepTimerRemaining
-                uiState = state.toUiState(uiState.sleepTimerRemaining)
+                updateUiStatesFromPlaybackState(state, sleepRemaining)
                 miniPlayerSong = state.currentSong
                 miniPlayerIsPlaying = state.isPlaying
                 miniPlayerProgress = if (state.durationMs > 0) {
                     state.progressMs.coerceAtLeast(0L).toFloat() / state.durationMs.toFloat()
                 } else {
                     0f
-                }
-                if (sleepRemaining != uiState.sleepTimerRemaining) {
-                    uiState = uiState.copy(sleepTimerRemaining = sleepRemaining)
                 }
             }
         }
@@ -79,16 +91,24 @@ class PlayerViewModel(
     }
 
     fun startSleepTimer(minutes: Int) {
+        startSleepTimerForMinutes(minutes)
+    }
+
+    fun startSleepTimerForMinutes(totalMinutes: Int) {
+        if (totalMinutes <= 0) return
         sleepTimerJob?.cancel()
-        val totalSeconds = minutes * 60L
+        val totalSeconds = totalMinutes * 60L
         uiState = uiState.copy(sleepTimerRemaining = totalSeconds)
+        nowPlayingControlsUiState = nowPlayingControlsUiState.copy(sleepTimerRemaining = totalSeconds)
         sleepTimerJob = viewModelScope.launch {
             var remain = totalSeconds
             while (remain > 0) {
                 delay(1_000)
                 remain -= 1
                 uiState = uiState.copy(sleepTimerRemaining = remain)
+                nowPlayingControlsUiState = nowPlayingControlsUiState.copy(sleepTimerRemaining = remain)
             }
+            sleepTimerJob = null
             playerRepository.stop()
         }
     }
@@ -97,6 +117,7 @@ class PlayerViewModel(
         sleepTimerJob?.cancel()
         sleepTimerJob = null
         uiState = uiState.copy(sleepTimerRemaining = 0)
+        nowPlayingControlsUiState = nowPlayingControlsUiState.copy(sleepTimerRemaining = 0)
     }
 
     fun removeFromQueue(songId: String) {
@@ -110,6 +131,15 @@ class PlayerViewModel(
     override fun onCleared() {
         sleepTimerJob?.cancel()
         super.onCleared()
+    }
+
+    private fun updateUiStatesFromPlaybackState(state: PlaybackState, sleepTimerRemaining: Long) {
+        uiState = state.toUiState(sleepTimerRemaining)
+        nowPlayingArtworkUiState = state.toArtworkUiState()
+        nowPlayingLyricsUiState = state.toLyricsUiState()
+        nowPlayingTrackUiState = state.toTrackUiState()
+        nowPlayingProgressUiState = state.toProgressUiState()
+        nowPlayingControlsUiState = state.toControlsUiState(sleepTimerRemaining)
     }
 
     private fun PlaybackState.toUiState(sleepTimerRemaining: Long): PlayerUiState {
@@ -127,6 +157,45 @@ class PlayerViewModel(
             currentIndex = currentIndex,
             lyrics = lyrics,
             currentLyricIndex = currentLyricIndex
+        )
+    }
+
+    private fun PlaybackState.toArtworkUiState(): NowPlayingArtworkUiState {
+        return NowPlayingArtworkUiState(
+            currentSong = currentSong,
+            isPlaying = isPlaying
+        )
+    }
+
+    private fun PlaybackState.toLyricsUiState(): NowPlayingLyricsUiState {
+        return NowPlayingLyricsUiState(
+            lyrics = lyrics,
+            currentLyricIndex = currentLyricIndex
+        )
+    }
+
+    private fun PlaybackState.toTrackUiState(): NowPlayingTrackUiState {
+        return NowPlayingTrackUiState(
+            currentSong = currentSong,
+            isPlaying = isPlaying
+        )
+    }
+
+    private fun PlaybackState.toProgressUiState(): NowPlayingProgressUiState {
+        val safeDuration = durationMs.coerceAtLeast(0L)
+        val safeProgress = progressMs.coerceAtLeast(0L)
+        return NowPlayingProgressUiState(
+            progress = if (safeDuration > 0) safeProgress.toFloat() / safeDuration.toFloat() else 0f,
+            progressMs = safeProgress,
+            durationMs = safeDuration
+        )
+    }
+
+    private fun PlaybackState.toControlsUiState(sleepTimerRemaining: Long): NowPlayingControlsUiState {
+        return NowPlayingControlsUiState(
+            playMode = playMode,
+            isPlaying = isPlaying,
+            sleepTimerRemaining = sleepTimerRemaining
         )
     }
 }

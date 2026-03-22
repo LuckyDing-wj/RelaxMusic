@@ -6,7 +6,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material3.Icon
@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import com.relaxmusic.app.domain.model.Playlist
 import com.relaxmusic.app.domain.model.Song
 import com.relaxmusic.app.ui.components.EmptyLibraryView
+import com.relaxmusic.app.ui.theme.RelaxMusicColors
 
 @Composable
 fun CollectionScreen(
@@ -31,8 +32,10 @@ fun CollectionScreen(
     onToggleFavorite: (String) -> Unit,
     onAddSongToPlaylist: (Long, String) -> Unit,
     showBackButton: Boolean = true,
-    emptyMessageAction: (() -> Unit)? = null
+    emptyMessageAction: (() -> Unit)? = null,
+    supportingText: String? = null
 ) {
+    val colors = RelaxMusicColors
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -45,6 +48,9 @@ fun CollectionScreen(
             }
         }
         Text(title, style = MaterialTheme.typography.headlineMedium)
+        if (supportingText != null) {
+            Text(supportingText, color = colors.textSecondary)
+        }
 
         if (songs.isEmpty()) {
             EmptyLibraryView(
@@ -57,7 +63,7 @@ fun CollectionScreen(
                 contentPadding = PaddingValues(bottom = 120.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                items(songs, key = { it.id }) { song ->
+                itemsIndexed(songs, key = { index, song -> "${song.id}-$index" }) { _, song ->
                     val rowModel = SongRowUiModel(
                         id = song.id,
                         title = song.title,

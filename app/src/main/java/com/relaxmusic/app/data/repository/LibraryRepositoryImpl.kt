@@ -44,7 +44,7 @@ class LibraryRepositoryImpl(
     }
 
     override fun observePlaybackHistory(limit: Int): Flow<List<Song>> {
-        return songDao.observeRecentlyPlayed(limit).map { list -> list.map { it.toDomain() } }
+        return playbackHistoryDao.observeRecentSongs(limit).map { list -> list.map { it.toDomain() } }
     }
 
     override fun observeAlbums(): Flow<List<Album>> {

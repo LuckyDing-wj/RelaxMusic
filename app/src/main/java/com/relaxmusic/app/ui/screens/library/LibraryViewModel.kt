@@ -3,13 +3,11 @@ package com.relaxmusic.app.ui.screens.library
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.relaxmusic.app.domain.model.Playlist
 import com.relaxmusic.app.domain.repository.LibraryRepository
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -24,9 +22,6 @@ class LibraryViewModel(
     private val statusMessage = MutableStateFlow("请选择一个或多个本地音乐目录开始。")
     private val errorMessage = MutableStateFlow<String?>(null)
     private val currentSongId = MutableStateFlow<String?>(null)
-    private val selectedPlaylistId = MutableStateFlow<Long?>(null)
-    private val selectedAlbumName = MutableStateFlow<String?>(null)
-    private val selectedArtistName = MutableStateFlow<String?>(null)
 
     private data class LibraryTransientState(
         val path: String,
@@ -36,10 +31,7 @@ class LibraryViewModel(
         val queryValue: String,
         val status: String,
         val error: String?,
-        val playingId: String?,
-        val selectedPlaylistId: Long?,
-        val selectedAlbumName: String?,
-        val selectedArtistName: String?
+        val playingId: String?
     )
 
     private val transientState = combine(
@@ -50,10 +42,7 @@ class LibraryViewModel(
         query,
         statusMessage,
         errorMessage,
-        currentSongId,
-        selectedPlaylistId,
-        selectedAlbumName,
-        selectedArtistName
+        currentSongId
     ) { values ->
         LibraryTransientState(
             path = values[0] as String,
@@ -63,15 +52,8 @@ class LibraryViewModel(
             queryValue = values[4] as String,
             status = values[5] as String,
             error = values[6] as String?,
-            playingId = values[7] as String?,
-            selectedPlaylistId = values[8] as Long?,
-            selectedAlbumName = values[9] as String?,
-            selectedArtistName = values[10] as String?
+            playingId = values[7] as String?
         )
-    }
-
-    private val selectedPlaylistSongs = selectedPlaylistId.flatMapLatest { playlistId ->
-        if (playlistId == null) flowOf(emptyList()) else libraryRepository.observePlaylistSongs(playlistId)
     }
 
     val state = combine(
@@ -82,7 +64,6 @@ class LibraryViewModel(
         libraryRepository.observeAlbums(),
         libraryRepository.observeArtists(),
         libraryRepository.observePlaylists(),
-        selectedPlaylistSongs,
         transientState
     ) { values ->
         val songs = values[0] as List<com.relaxmusic.app.domain.model.Song>
@@ -92,8 +73,7 @@ class LibraryViewModel(
         val albums = values[4] as List<com.relaxmusic.app.domain.model.Album>
         val artists = values[5] as List<com.relaxmusic.app.domain.model.Artist>
         val playlists = values[6] as List<com.relaxmusic.app.domain.model.Playlist>
-        val playlistSongs = values[7] as List<com.relaxmusic.app.domain.model.Song>
-        val transient = values[8] as LibraryTransientState
+        val transient = values[7] as LibraryTransientState
 
         val queryValue = transient.queryValue
         val filteredSongs = if (queryValue.isBlank()) {
@@ -116,7 +96,7 @@ class LibraryViewModel(
             songs = filteredSongs,
             favoriteSongs = favorites,
             recentSongs = recentSongs.filter { it.lastPlayedAt != null },
-            historySongs = historySongs.filter { it.lastPlayedAt != null },
+            historySongs = historySongs,
             albums = albums,
             artists = artists,
             playlists = playlists,
@@ -125,11 +105,7 @@ class LibraryViewModel(
             query = queryValue,
             statusMessage = transient.status,
             errorMessage = transient.error,
-            currentSongId = transient.playingId,
-            selectedPlaylistId = transient.selectedPlaylistId,
-            selectedPlaylistSongs = playlistSongs,
-            selectedAlbumName = transient.selectedAlbumName,
-            selectedArtistName = transient.selectedArtistName
+            currentSongId = transient.playingId
         )
     }.stateIn(
         scope = viewModelScope,
@@ -189,7 +165,6 @@ class LibraryViewModel(
     fun deletePlaylist(playlistId: Long) {
         viewModelScope.launch {
             libraryRepository.deletePlaylist(playlistId)
-            if (selectedPlaylistId.value == playlistId) selectedPlaylistId.value = null
         }
     }
 
@@ -201,16 +176,8 @@ class LibraryViewModel(
         viewModelScope.launch { libraryRepository.removeSongFromPlaylist(playlistId, songId) }
     }
 
-    fun selectPlaylist(playlist: Playlist?) {
-        selectedPlaylistId.value = playlist?.id
-    }
-
-    fun selectAlbum(name: String?) {
-        selectedAlbumName.value = name
-    }
-
-    fun selectArtist(name: String?) {
-        selectedArtistName.value = name
+    fun observePlaylistSongs(playlistId: Long): Flow<List<com.relaxmusic.app.domain.model.Song>> {
+        return libraryRepository.observePlaylistSongs(playlistId)
     }
 
     fun rescan() {

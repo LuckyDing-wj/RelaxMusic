@@ -1,14 +1,18 @@
 package com.relaxmusic.app.data.repository
 
 import android.content.Context
+import android.content.Intent
+import androidx.core.content.ContextCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import com.relaxmusic.app.data.local.LyricLoader
-import com.relaxmusic.app.data.player.MusicPlayerController
+import com.relaxmusic.app.data.local.SongLyricLoader
+import com.relaxmusic.app.data.player.PlayerController
 import com.relaxmusic.app.domain.model.PlayMode
 import com.relaxmusic.app.domain.model.PlaybackState
 import com.relaxmusic.app.domain.model.Song
 import com.relaxmusic.app.domain.repository.PlayerRepository
+import com.relaxmusic.app.service.PlaybackService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -18,21 +22,29 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 
 class PlayerRepositoryImpl(
-    private val playerController: MusicPlayerController
+    private val playerController: PlayerController,
+    private val lyricLoader: SongLyricLoader = LyricLoader(),
+    private val progressScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
+    private val lyricScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
+    private val startPlaybackService: (Context) -> Unit = { context ->
+        ContextCompat.startForegroundService(
+            context,
+            Intent(context, PlaybackService::class.java)
+        )
+    }
 ) : PlayerRepository {
     private var appContext: Context? = null
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val _playbackState = MutableStateFlow(PlaybackState())
     override val playbackState: StateFlow<PlaybackState> = _playbackState.asStateFlow()
 
     private var queue: List<Song> = emptyList()
     private var progressJob: Job? = null
+    private var lyricLoadJob: Job? = null
     private var currentSongObserver: ((Song?) -> Unit)? = null
-    private val lyricLoader = LyricLoader()
-    private var cachedLyricSongId: String? = null
+    private var loadedLyricSongId: String? = null
+    private var loadingLyricSongId: String? = null
     private var cachedLyrics = emptyList<com.relaxmusic.app.domain.model.LyricLine>()
 
     private val playerListener = object : Player.Listener {
@@ -56,6 +68,7 @@ class PlayerRepositoryImpl(
 
     override fun bindContext(context: Context) {
         appContext = context.applicationContext
+        requestLyricsForCurrentSongIfNeeded(currentSong())
     }
 
     override fun playSong(song: Song, queue: List<Song>) {
@@ -64,11 +77,15 @@ class PlayerRepositoryImpl(
         val mediaItems = this.queue.map { queuedSong -> MediaItem.fromUri(queuedSong.uri) }
         playerController.setQueue(mediaItems, startIndex)
         updateState(resetProgress = true)
+        ensurePlaybackService()
         startProgressUpdates()
     }
 
     override fun togglePlayPause() {
         playerController.togglePlayPause()
+        if (playerController.isPlaying()) {
+            ensurePlaybackService()
+        }
         updateState()
     }
 
@@ -105,6 +122,7 @@ class PlayerRepositoryImpl(
     }
 
     override fun stop() {
+        queue = emptyList()
         playerController.stop()
         stopProgressUpdates()
         updateState(resetProgress = true)
@@ -120,11 +138,22 @@ class PlayerRepositoryImpl(
         }
 
         val currentSongId = currentSong()?.id
+        val currentPositionMs = playerController.currentPosition().coerceAtLeast(0L)
+        val wasPlaying = playerController.isPlaying()
         queue = updatedQueue
         val nextSong = updatedQueue.firstOrNull { it.id == currentSongId } ?: updatedQueue.first()
         val mediaItems = queue.map { MediaItem.fromUri(it.uri) }
         val startIndex = queue.indexOfFirst { it.id == nextSong.id }.coerceAtLeast(0)
-        playerController.setQueue(mediaItems, startIndex)
+        if (nextSong.id == currentSongId) {
+            playerController.replaceQueue(
+                mediaItems = mediaItems,
+                startIndex = startIndex,
+                startPositionMs = currentPositionMs,
+                shouldPlay = wasPlaying
+            )
+        } else {
+            playerController.setQueue(mediaItems, startIndex)
+        }
         updateState(resetProgress = true)
     }
 
@@ -135,6 +164,7 @@ class PlayerRepositoryImpl(
 
     override fun release() {
         stopProgressUpdates()
+        lyricLoadJob?.cancel()
         playerController.removeListener(playerListener)
         playerController.release()
     }
@@ -152,23 +182,7 @@ class PlayerRepositoryImpl(
     private fun updateState(resetProgress: Boolean = false) {
         val progressMs = if (resetProgress) playerController.currentPosition() else playerController.currentPosition()
         val current = currentSong()
-        val lyrics = when {
-            current == null -> {
-                cachedLyricSongId = null
-                cachedLyrics = emptyList()
-                emptyList()
-            }
-
-            cachedLyricSongId == current.id -> cachedLyrics
-
-            else -> {
-                cachedLyricSongId = current.id
-                cachedLyrics = appContext?.let { context ->
-                    runBlocking { lyricLoader.load(context, current.uri, current.fileName) }
-                }.orEmpty()
-                cachedLyrics
-            }
-        }
+        val lyrics = current.resolveLyrics()
         val currentLyricIndex = lyrics.indexOfLast { it.timeMs <= progressMs }
         _playbackState.value = _playbackState.value.copy(
             currentSong = current,
@@ -183,9 +197,61 @@ class PlayerRepositoryImpl(
         currentSongObserver?.invoke(current)
     }
 
+    private fun Song?.resolveLyrics(): List<com.relaxmusic.app.domain.model.LyricLine> {
+        val song = this ?: return clearLyricsAndReturnEmpty()
+        requestLyricsForCurrentSongIfNeeded(song)
+        return if (loadedLyricSongId == song.id) cachedLyrics else emptyList()
+    }
+
+    private fun requestLyricsForCurrentSongIfNeeded(song: Song?) {
+        val currentSong = song ?: return
+        val context = appContext ?: return
+        if (loadedLyricSongId == currentSong.id || loadingLyricSongId == currentSong.id) return
+
+        lyricLoadJob?.cancel()
+        loadingLyricSongId = currentSong.id
+
+        lyricLoadJob = lyricScope.launch {
+            val lyrics = lyricLoader.load(context, currentSong.uri, currentSong.fileName)
+            val activeSong = currentSong()
+
+            if (activeSong?.id == currentSong.id) {
+                loadedLyricSongId = currentSong.id
+                loadingLyricSongId = null
+                cachedLyrics = lyrics
+                publishLyricState(currentSong.id)
+            } else if (loadingLyricSongId == currentSong.id) {
+                loadingLyricSongId = null
+            }
+        }
+    }
+
+    private fun publishLyricState(songId: String) {
+        if (_playbackState.value.currentSong?.id != songId && currentSong()?.id != songId) return
+        val progressMs = playerController.currentPosition().coerceAtLeast(0L)
+        _playbackState.value = _playbackState.value.copy(
+            lyrics = cachedLyrics,
+            currentLyricIndex = cachedLyrics.indexOfLast { it.timeMs <= progressMs }
+        )
+    }
+
+    private fun clearLyricsAndReturnEmpty(): List<com.relaxmusic.app.domain.model.LyricLine> {
+        lyricLoadJob?.cancel()
+        lyricLoadJob = null
+        loadingLyricSongId = null
+        loadedLyricSongId = null
+        cachedLyrics = emptyList()
+        return emptyList()
+    }
+
+    private fun ensurePlaybackService() {
+        val context = appContext ?: return
+        startPlaybackService(context)
+    }
+
     private fun startProgressUpdates() {
         progressJob?.cancel()
-        progressJob = scope.launch {
+        progressJob = progressScope.launch {
             while (true) {
                 updateState()
                 delay(500)

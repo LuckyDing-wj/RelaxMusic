@@ -30,7 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.relaxmusic.app.domain.model.Playlist
 import com.relaxmusic.app.domain.model.Song
-import com.relaxmusic.app.ui.theme.TextSecondary
+import com.relaxmusic.app.ui.theme.RelaxMusicColors
 
 @Composable
 fun PlaylistDetailScreen(
@@ -46,6 +46,7 @@ fun PlaylistDetailScreen(
     onRenamePlaylist: (Long, String) -> Unit,
     onDeletePlaylist: (Long) -> Unit
 ) {
+    val colors = RelaxMusicColors
     var adding by remember { mutableStateOf(false) }
     var renaming by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf(false) }
@@ -75,7 +76,7 @@ fun PlaylistDetailScreen(
         }
 
         Text(playlist?.name ?: "歌单", style = MaterialTheme.typography.headlineMedium)
-        Text("${playlistSongs.size} 首歌曲", color = TextSecondary)
+        Text("${playlistSongs.size} 首歌曲", color = colors.textSecondary)
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),

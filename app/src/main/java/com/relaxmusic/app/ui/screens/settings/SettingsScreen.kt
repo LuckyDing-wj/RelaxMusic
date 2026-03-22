@@ -17,15 +17,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Switch
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.relaxmusic.app.ui.theme.PanelBorder
-import com.relaxmusic.app.ui.theme.TextSecondary
+import com.relaxmusic.app.domain.model.ThemeMode
+import com.relaxmusic.app.ui.theme.RelaxMusicColors
 
 @Composable
 fun SettingsScreen(
@@ -36,8 +36,9 @@ fun SettingsScreen(
     onExportBackup: () -> Unit,
     onImportBackup: () -> Unit,
     showBackButton: Boolean = true,
-    onUseEmbeddedTheme: () -> Unit
+    onThemeModeChange: (ThemeMode) -> Unit
 ) {
+    val colors = RelaxMusicColors
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -54,7 +55,7 @@ fun SettingsScreen(
         }
 
         SettingsCard(title = "音乐目录") {
-            Text(state.libraryFolderLabel, color = TextSecondary)
+            Text(state.libraryFolderLabel, color = colors.textSecondary)
             Button(onClick = onPickFolder, modifier = Modifier.padding(top = 12.dp)) {
                 Text("添加目录")
             }
@@ -73,7 +74,7 @@ fun SettingsScreen(
                         ) {
                             Text(
                                 state.libraryFolderLabels[folder] ?: folder,
-                                color = TextSecondary,
+                                color = colors.textSecondary,
                                 modifier = Modifier.weight(1f),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
@@ -88,18 +89,23 @@ fun SettingsScreen(
         }
 
         SettingsCard(title = "界面") {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("跟随系统主题")
-                Switch(checked = state.followSystemTheme, onCheckedChange = { onUseEmbeddedTheme() })
+            ThemeMode.entries.forEach { themeMode ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(themeMode.label)
+                    RadioButton(
+                        selected = state.themeMode == themeMode,
+                        onClick = { onThemeModeChange(themeMode) }
+                    )
+                }
             }
         }
 
         SettingsCard(title = "开发状态") {
-            Text(state.projectStageLabel, color = TextSecondary)
+            Text(state.projectStageLabel, color = colors.textSecondary)
             OutlinedButton(onClick = {}, modifier = Modifier.padding(top = 12.dp)) {
                 Text("下一步继续完善后台播放与体验")
             }
@@ -115,18 +121,26 @@ fun SettingsScreen(
                 }
             }
             if (state.backupStatus != null) {
-                Text(state.backupStatus, color = TextSecondary, modifier = Modifier.padding(top = 8.dp))
+                Text(state.backupStatus, color = colors.textSecondary, modifier = Modifier.padding(top = 8.dp))
             }
         }
     }
 }
 
+private val ThemeMode.label: String
+    get() = when (this) {
+        ThemeMode.SYSTEM -> "跟随系统"
+        ThemeMode.LIGHT -> "浅色"
+        ThemeMode.DARK -> "深色"
+    }
+
 @Composable
 private fun SettingsCard(title: String, content: @Composable () -> Unit) {
+    val colors = RelaxMusicColors
     Card(
         shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.72f)),
-        border = BorderStroke(1.dp, PanelBorder)
+        colors = CardDefaults.cardColors(containerColor = colors.panelSurface),
+        border = BorderStroke(1.dp, colors.panelBorder)
     ) {
         Column(
             modifier = Modifier

@@ -28,9 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.relaxmusic.app.domain.model.Song
-import com.relaxmusic.app.ui.theme.Accent
-import com.relaxmusic.app.ui.theme.PanelBorder
-import com.relaxmusic.app.ui.theme.TextSecondary
+import com.relaxmusic.app.ui.theme.RelaxMusicColors
 import com.relaxmusic.app.utils.TimeFormatter
 
 @Composable
@@ -43,14 +41,15 @@ fun PlayerBar(
     onOpenTimer: () -> Unit,
     onOpenQueue: () -> Unit
 ) {
+    val colors = RelaxMusicColors
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp)
             .clickable(onClick = onOpenNowPlaying),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.88f)),
-        border = BorderStroke(1.dp, PanelBorder)
+        colors = CardDefaults.cardColors(containerColor = colors.panelSurfaceStrong),
+        border = BorderStroke(1.dp, colors.panelBorder)
     ) {
         Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
             Row(
@@ -67,14 +66,14 @@ fun PlayerBar(
                         Icon(
                             imageVector = if (isPlaying) Icons.Rounded.GraphicEq else Icons.Rounded.PlayCircle,
                             contentDescription = "playback state",
-                            tint = Accent
+                            tint = colors.accent
                         )
                     }
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = song?.title ?: "还没有播放歌曲",
                             style = MaterialTheme.typography.titleMedium,
-                            color = if (song != null) Accent else MaterialTheme.colorScheme.onSurface,
+                            color = if (song != null) colors.accent else MaterialTheme.colorScheme.onSurface,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.fillMaxWidth().then(
@@ -84,7 +83,7 @@ fun PlayerBar(
                         Text(
                             text = song?.artist ?: "选择本地音乐后即可开始",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = TextSecondary,
+                            color = colors.textSecondary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -92,7 +91,7 @@ fun PlayerBar(
                             Text(
                                 text = "本地文件 · ${TimeFormatter.formatSongDuration(song.duration)}",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = TextSecondary
+                                color = colors.textSecondary
                             )
                         }
                     }

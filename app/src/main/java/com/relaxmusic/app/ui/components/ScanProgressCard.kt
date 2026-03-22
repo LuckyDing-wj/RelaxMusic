@@ -14,8 +14,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.relaxmusic.app.ui.theme.PanelBorder
-import com.relaxmusic.app.ui.theme.TextSecondary
+import com.relaxmusic.app.ui.theme.RelaxMusicColors
 
 @Composable
 fun ScanProgressCard(
@@ -26,11 +25,12 @@ fun ScanProgressCard(
     errorMessage: String?,
     modifier: Modifier = Modifier
 ) {
+    val colors = RelaxMusicColors
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.72f)),
-        border = BorderStroke(1.dp, PanelBorder)
+        colors = CardDefaults.cardColors(containerColor = colors.panelSurface),
+        border = BorderStroke(1.dp, colors.panelBorder)
     ) {
         Column(
             modifier = Modifier.padding(18.dp),
@@ -47,7 +47,7 @@ fun ScanProgressCard(
             Text(
                 text = statusMessage,
                 style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary
+                color = colors.textSecondary
             )
             if (errorMessage != null) {
                 Text(

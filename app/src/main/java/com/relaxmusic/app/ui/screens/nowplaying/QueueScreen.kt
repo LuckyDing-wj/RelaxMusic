@@ -22,8 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.relaxmusic.app.domain.model.Song
-import com.relaxmusic.app.ui.theme.Accent
-import com.relaxmusic.app.ui.theme.TextSecondary
+import com.relaxmusic.app.ui.theme.RelaxMusicColors
 
 @Composable
 fun QueueScreen(
@@ -33,6 +32,7 @@ fun QueueScreen(
     onSongClick: (Song) -> Unit,
     onRemove: (String) -> Unit
 ) {
+    val colors = RelaxMusicColors
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -44,7 +44,7 @@ fun QueueScreen(
                 Icon(Icons.Rounded.ArrowBack, contentDescription = "back")
             }
             Text("播放队列", style = MaterialTheme.typography.headlineMedium)
-            Text("${queue.size} 首", color = TextSecondary, modifier = Modifier.padding(top = 12.dp))
+            Text("${queue.size} 首", color = colors.textSecondary, modifier = Modifier.padding(top = 12.dp))
         }
 
         LazyColumn(
@@ -59,18 +59,18 @@ fun QueueScreen(
                 ) {
                     Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         if (index == currentIndex) {
-                            Icon(Icons.Rounded.GraphicEq, contentDescription = "current", tint = Accent)
+                            Icon(Icons.Rounded.GraphicEq, contentDescription = "current", tint = colors.accent)
                         }
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = song.title,
                                 style = MaterialTheme.typography.titleMedium,
-                                color = if (index == currentIndex) Accent else MaterialTheme.colorScheme.onSurface,
+                                color = if (index == currentIndex) colors.accent else MaterialTheme.colorScheme.onSurface,
                                 maxLines = 1
                             )
                             Text(
                                 text = "${song.artist} · ${song.album}",
-                                color = TextSecondary,
+                                color = colors.textSecondary,
                                 maxLines = 1
                             )
                         }

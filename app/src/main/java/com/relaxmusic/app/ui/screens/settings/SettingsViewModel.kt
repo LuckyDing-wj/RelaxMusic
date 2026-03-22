@@ -4,8 +4,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.relaxmusic.app.domain.model.ThemeMode
+import com.relaxmusic.app.domain.repository.SettingsRepository
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
-class SettingsViewModel : ViewModel() {
+class SettingsViewModel(
+    private val settingsRepository: SettingsRepository
+) : ViewModel() {
     var uiState by mutableStateOf(SettingsUiState())
         private set
 
@@ -16,34 +23,32 @@ class SettingsViewModel : ViewModel() {
         return if (folderName.isBlank()) decoded else folderName
     }
 
-    fun onFolderPicked(label: String) {
-        val updated = (uiState.libraryFolders + label).distinct()
-        uiState = uiState.copy(
-            libraryFolderLabel = when (updated.size) {
-                0 -> "尚未授权"
-                1 -> formatFolderLabel(updated.first())
-                else -> "已添加 ${updated.size} 个目录"
-            },
-            libraryFolders = updated,
-            libraryFolderLabels = updated.associateWith(::formatFolderLabel)
-        )
+    init {
+        viewModelScope.launch {
+            settingsRepository.observeLibraryDirectories().collectLatest { directories ->
+                uiState = uiState.copy(
+                    libraryFolderLabel = when (directories.size) {
+                        0 -> "尚未授权"
+                        1 -> formatFolderLabel(directories.first())
+                        else -> "已添加 ${directories.size} 个目录"
+                    },
+                    libraryFolders = directories,
+                    libraryFolderLabels = directories.associateWith(::formatFolderLabel)
+                )
+            }
+        }
+
+        viewModelScope.launch {
+            settingsRepository.observeThemeMode().collectLatest { themeMode ->
+                uiState = uiState.copy(themeMode = themeMode)
+            }
+        }
     }
 
-    fun onFolderRemoved(label: String) {
-        val updated = uiState.libraryFolders.filterNot { it == label }
-        uiState = uiState.copy(
-            libraryFolderLabel = when (updated.size) {
-                0 -> "尚未授权"
-                1 -> formatFolderLabel(updated.first())
-                else -> "已添加 ${updated.size} 个目录"
-            },
-            libraryFolders = updated,
-            libraryFolderLabels = updated.associateWith(::formatFolderLabel)
-        )
-    }
-
-    fun toggleThemeFollowSystem() {
-        uiState = uiState.copy(followSystemTheme = !uiState.followSystemTheme)
+    fun setThemeMode(themeMode: ThemeMode) {
+        viewModelScope.launch {
+            settingsRepository.setThemeMode(themeMode)
+        }
     }
 
     fun setBackupStatus(status: String) {

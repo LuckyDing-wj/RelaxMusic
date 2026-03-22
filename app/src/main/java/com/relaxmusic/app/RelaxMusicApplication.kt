@@ -13,8 +13,10 @@ import com.relaxmusic.app.data.local.DirectoryScanner
 import com.relaxmusic.app.data.player.MusicPlayerController
 import com.relaxmusic.app.data.repository.LibraryRepositoryImpl
 import com.relaxmusic.app.data.repository.PlayerRepositoryImpl
+import com.relaxmusic.app.data.repository.SettingsRepositoryImpl
 import com.relaxmusic.app.domain.repository.LibraryRepository
 import com.relaxmusic.app.domain.repository.PlayerRepository
+import com.relaxmusic.app.domain.repository.SettingsRepository
 import com.relaxmusic.app.domain.model.Song
 import com.relaxmusic.app.service.PlaybackNotification
 
@@ -43,6 +45,7 @@ class RelaxMusicApplication : Application() {
 interface AppContainer {
     val libraryRepository: LibraryRepository
     val playerRepository: PlayerRepository
+    val settingsRepository: SettingsRepository
     val musicPlayerController: MusicPlayerController
     val backupManager: AppBackupManager
     fun observeCurrentSong(observer: (Song?) -> Unit)
@@ -102,6 +105,10 @@ private class DefaultAppContainer(application: Application) : AppContainer {
 
     override val playerRepository: PlayerRepository = PlayerRepositoryImpl(
         playerController = musicPlayerController
+    )
+
+    override val settingsRepository: SettingsRepository = SettingsRepositoryImpl(
+        settingsDao = database.settingsDao()
     )
 
     override fun observeCurrentSong(observer: (Song?) -> Unit) {

@@ -37,9 +37,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.relaxmusic.app.ui.components.EmptyLibraryView
 import com.relaxmusic.app.ui.components.ScanProgressCard
-import com.relaxmusic.app.ui.theme.Accent
-import com.relaxmusic.app.ui.theme.PanelBorder
-import com.relaxmusic.app.ui.theme.TextSecondary
+import com.relaxmusic.app.ui.theme.RelaxMusicColors
 
 @Composable
 fun LibraryScreen(
@@ -55,6 +53,7 @@ fun LibraryScreen(
     onOpenRecent: () -> Unit,
     onOpenSettings: () -> Unit
 ) {
+    val colors = RelaxMusicColors
     val favoriteCountText = remember(state.favoriteSongs.size) { "${state.favoriteSongs.size} 首已标记" }
     val recentSubtitle = remember(state.recentSongs) {
         state.recentSongs.take(2).joinToString(" / ") { it.title }
@@ -78,7 +77,7 @@ fun LibraryScreen(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text("RelaxMusic", style = MaterialTheme.typography.headlineMedium)
-                    Text("纯本地音乐播放器 V1", color = TextSecondary)
+                    Text("纯本地音乐播放器 V1", color = colors.textSecondary)
                 }
                 IconButton(onClick = onOpenSettings) {
                     Icon(Icons.Rounded.Settings, contentDescription = "settings")
@@ -115,8 +114,8 @@ fun LibraryScreen(
                     state.libraryDirectories.forEach { directoryUri ->
                         Surface(
                             shape = RoundedCornerShape(16.dp),
-                            color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.68f),
-                            border = BorderStroke(1.dp, PanelBorder)
+                            color = colors.panelSurface,
+                            border = BorderStroke(1.dp, colors.panelBorder)
                         ) {
                             Row(
                                 modifier = Modifier
@@ -129,7 +128,7 @@ fun LibraryScreen(
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                     modifier = Modifier.weight(1f),
-                                    color = TextSecondary
+                                    color = colors.textSecondary
                                 )
                                 TextButton(onClick = { onRemoveFolder(directoryUri) }) {
                                     Text("移除")
@@ -159,7 +158,7 @@ fun LibraryScreen(
             QuickInfoCard(
                 title = "完整曲库",
                 subtitle = if (state.totalSongCount == 0) "还没有歌曲" else "浏览全部 ${state.totalSongCount} 首歌曲",
-                icon = { Icon(Icons.Rounded.MusicNote, contentDescription = "full library", tint = Accent) },
+                icon = { Icon(Icons.Rounded.MusicNote, contentDescription = "full library", tint = colors.accent) },
                 onClick = onOpenFullLibrary,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -172,7 +171,7 @@ fun LibraryScreen(
                         QuickInfoCard(
                             title = "收藏",
                             subtitle = favoriteCountText,
-                            icon = { Icon(Icons.Rounded.Favorite, contentDescription = "favorites", tint = Accent) },
+                            icon = { Icon(Icons.Rounded.Favorite, contentDescription = "favorites", tint = colors.accent) },
                             onClick = onOpenFavorites,
                             modifier = Modifier.weight(1f)
                         )
@@ -181,7 +180,7 @@ fun LibraryScreen(
                         QuickInfoCard(
                             title = "最近播放",
                             subtitle = recentSubtitle,
-                            icon = { Icon(Icons.Rounded.History, contentDescription = "recent", tint = Accent) },
+                            icon = { Icon(Icons.Rounded.History, contentDescription = "recent", tint = colors.accent) },
                             onClick = onOpenRecent,
                             modifier = Modifier.weight(1f)
                         )
@@ -194,7 +193,7 @@ fun LibraryScreen(
             QuickInfoCard(
                 title = "歌单",
                 subtitle = playlistSubtitle,
-                icon = { Icon(Icons.Rounded.LibraryMusic, contentDescription = "playlists", tint = Accent) },
+                icon = { Icon(Icons.Rounded.LibraryMusic, contentDescription = "playlists", tint = colors.accent) },
                 onClick = onOpenPlaylists,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -205,14 +204,14 @@ fun LibraryScreen(
                 QuickInfoCard(
                     title = "专辑",
                     subtitle = albumsSubtitle,
-                    icon = { Icon(Icons.Rounded.Album, contentDescription = "albums", tint = Accent) },
+                    icon = { Icon(Icons.Rounded.Album, contentDescription = "albums", tint = colors.accent) },
                     onClick = onOpenAlbums,
                     modifier = Modifier.weight(1f)
                 )
                 QuickInfoCard(
                     title = "艺术家",
                     subtitle = artistsSubtitle,
-                    icon = { Icon(Icons.Rounded.Person, contentDescription = "artists", tint = Accent) },
+                    icon = { Icon(Icons.Rounded.Person, contentDescription = "artists", tint = colors.accent) },
                     onClick = onOpenArtists,
                     modifier = Modifier.weight(1f)
                 )
@@ -228,7 +227,7 @@ fun LibraryScreen(
                 Text(
                     text = "首页只展示摘要和入口，完整歌曲列表已移到“完整曲库”。",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary
+                    color = colors.textSecondary
                 )
             }
         }
@@ -243,12 +242,13 @@ private fun QuickInfoCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = RelaxMusicColors
     Surface(
         modifier = modifier.clickable(onClick = onClick),
         shape = RoundedCornerShape(18.dp),
-        color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.72f),
+        color = colors.panelSurface,
         tonalElevation = 0.dp,
-        border = BorderStroke(1.dp, PanelBorder)
+        border = BorderStroke(1.dp, colors.panelBorder)
     ) {
         Row(
             modifier = Modifier
@@ -258,11 +258,11 @@ private fun QuickInfoCard(
         ) {
             icon()
             Column(modifier = Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleMedium, color = Accent)
+                Text(title, style = MaterialTheme.typography.titleMedium, color = colors.accent)
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary,
+                    color = colors.textSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )

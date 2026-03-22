@@ -1,27 +1,40 @@
 package com.relaxmusic.app.service
 
 import android.app.PendingIntent
+import android.app.NotificationManager
 import android.content.Intent
 import androidx.core.app.NotificationCompat
+import androidx.core.app.ServiceCompat
+import androidx.core.content.getSystemService
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.relaxmusic.app.RelaxMusicApplication
 import com.relaxmusic.app.MainActivity
+import com.relaxmusic.app.domain.model.PlaybackState
 import com.relaxmusic.app.domain.model.Song
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 class PlaybackService : MediaSessionService() {
     private var mediaSession: MediaSession? = null
-    private var currentSong: Song? = null
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var playbackState: PlaybackState = PlaybackState()
+    private var isForeground = false
 
     override fun onCreate() {
         super.onCreate()
         val app = application as RelaxMusicApplication
         mediaSession = MediaSession.Builder(this, app.appContainer.musicPlayerController.exoPlayer).build()
-        app.appContainer.observeCurrentSong { song ->
-            currentSong = song
-            refreshNotification()
+        serviceScope.launch {
+            app.appContainer.playerRepository.playbackState.collectLatest { state ->
+                playbackState = state
+                refreshNotification()
+            }
         }
-        startForeground(PlaybackNotification.NOTIFICATION_ID, buildNotification())
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -33,7 +46,7 @@ class PlaybackService : MediaSessionService() {
             PlaybackAction.STOP -> app.appContainer.playerRepository.stop()
         }
         refreshNotification()
-        return super.onStartCommand(intent, flags, startId)
+        return START_NOT_STICKY
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
@@ -41,16 +54,32 @@ class PlaybackService : MediaSessionService() {
     }
 
     override fun onDestroy() {
+        serviceScope.cancel()
         mediaSession?.release()
         mediaSession = null
         super.onDestroy()
     }
 
     private fun refreshNotification() {
-        startForeground(PlaybackNotification.NOTIFICATION_ID, buildNotification())
+        val shouldShowNotification = playbackState.currentSong != null
+
+        if (!shouldShowNotification) {
+            if (isForeground) {
+                ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+                isForeground = false
+            } else {
+                notificationManager()?.cancel(PlaybackNotification.NOTIFICATION_ID)
+            }
+            stopSelf()
+            return
+        }
+
+        val notification = buildNotification(playbackState.currentSong, playbackState.isPlaying)
+        startForeground(PlaybackNotification.NOTIFICATION_ID, notification)
+        isForeground = true
     }
 
-    private fun buildNotification() = NotificationCompat.Builder(this, PlaybackNotification.CHANNEL_ID)
+    private fun buildNotification(currentSong: Song?, isPlaying: Boolean) = NotificationCompat.Builder(this, PlaybackNotification.CHANNEL_ID)
         .setContentTitle(currentSong?.title ?: "RelaxMusic")
         .setContentText(currentSong?.let { "${it.artist} · ${it.album}" } ?: "本地音乐播放服务已就绪")
         .setSmallIcon(android.R.drawable.ic_media_play)
@@ -61,8 +90,8 @@ class PlaybackService : MediaSessionService() {
             actionIntent(PlaybackAction.PREVIOUS, 2)
         )
         .addAction(
-            android.R.drawable.ic_media_pause,
-            "播放/暂停",
+            if (isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play,
+            if (isPlaying) "暂停" else "播放",
             actionIntent(PlaybackAction.PLAY_PAUSE, 3)
         )
         .addAction(
@@ -72,9 +101,11 @@ class PlaybackService : MediaSessionService() {
         )
         .setContentIntent(contentIntent())
         .setStyle(androidx.media.app.NotificationCompat.MediaStyle())
-        .setOngoing(true)
+        .setOngoing(isPlaying)
         .setOnlyAlertOnce(true)
         .build()
+
+    private fun notificationManager(): NotificationManager? = getSystemService()
 
     private fun contentIntent(): PendingIntent {
         return PendingIntent.getActivity(

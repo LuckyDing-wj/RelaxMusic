@@ -23,8 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.relaxmusic.app.domain.model.Artist
-import com.relaxmusic.app.ui.theme.Accent
-import com.relaxmusic.app.ui.theme.TextSecondary
+import com.relaxmusic.app.ui.theme.RelaxMusicColors
 
 @Composable
 fun ArtistsScreen(
@@ -32,6 +31,7 @@ fun ArtistsScreen(
     onBack: () -> Unit,
     onOpenArtist: (Artist) -> Unit
 ) {
+    val colors = RelaxMusicColors
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -43,7 +43,7 @@ fun ArtistsScreen(
                 Icon(Icons.Rounded.ArrowBack, contentDescription = "back")
             }
             Text("艺术家", style = MaterialTheme.typography.headlineMedium)
-            Text("${artists.size} 位", color = TextSecondary, modifier = Modifier.padding(top = 12.dp))
+            Text("${artists.size} 位", color = colors.textSecondary, modifier = Modifier.padding(top = 12.dp))
         }
 
         LazyColumn(
@@ -55,7 +55,7 @@ fun ArtistsScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.72f)),
+                    colors = CardDefaults.cardColors(containerColor = colors.panelSurface),
                     onClick = { onOpenArtist(artist) }
                 ) {
                     Row(
@@ -64,10 +64,10 @@ fun ArtistsScreen(
                             .padding(horizontal = 16.dp, vertical = 14.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Icon(Icons.Rounded.Person, contentDescription = "artist", tint = Accent)
+                        Icon(Icons.Rounded.Person, contentDescription = "artist", tint = colors.accent)
                         Column {
                             Text(artist.name, style = MaterialTheme.typography.titleMedium)
-                            Text("${artist.songs.size} 首歌曲", color = TextSecondary)
+                            Text("${artist.songs.size} 首歌曲", color = colors.textSecondary)
                         }
                     }
                 }

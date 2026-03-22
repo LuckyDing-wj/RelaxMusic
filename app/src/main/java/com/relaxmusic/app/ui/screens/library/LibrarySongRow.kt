@@ -26,9 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.relaxmusic.app.domain.model.Playlist
-import com.relaxmusic.app.ui.theme.Accent
-import com.relaxmusic.app.ui.theme.PanelBorder
-import com.relaxmusic.app.ui.theme.TextSecondary
+import com.relaxmusic.app.ui.theme.RelaxMusicColors
 
 @Immutable
 data class SongRowUiModel(
@@ -49,13 +47,16 @@ fun LibrarySongRow(
     onAddToPlaylist: () -> Unit = {},
     onAddSongToPlaylist: (Long, String) -> Unit = { _, _ -> }
 ) {
+    val colors = RelaxMusicColors
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(20.dp),
-        border = BorderStroke(1.dp, PanelBorder),
-        colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.White.copy(alpha = if (row.isCurrent) 0.88f else 0.62f))
+        border = BorderStroke(1.dp, colors.panelBorder),
+        colors = CardDefaults.cardColors(
+            containerColor = if (row.isCurrent) colors.panelSurfaceStrong else colors.panelSurface
+        )
     ) {
         Row(
             modifier = Modifier
@@ -71,7 +72,7 @@ fun LibrarySongRow(
                     Icon(
                         imageVector = Icons.Rounded.GraphicEq,
                         contentDescription = "current song",
-                        tint = Accent,
+                        tint = colors.accent,
                         modifier = Modifier.padding(top = 2.dp)
                     )
                 }
@@ -79,7 +80,7 @@ fun LibrarySongRow(
                     Text(
                         text = row.title,
                         style = MaterialTheme.typography.titleMedium,
-                        color = if (row.isCurrent) Accent else MaterialTheme.colorScheme.onSurface,
+                        color = if (row.isCurrent) colors.accent else MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.fillMaxWidth().then(
@@ -88,7 +89,7 @@ fun LibrarySongRow(
                     )
                     Text(
                         text = row.subtitle,
-                        color = TextSecondary,
+                        color = colors.textSecondary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -100,7 +101,7 @@ fun LibrarySongRow(
                         Icon(
                             imageVector = Icons.Rounded.LibraryMusic,
                             contentDescription = "add to playlist",
-                            tint = TextSecondary
+                            tint = colors.textSecondary
                         )
                     }
                 }
@@ -108,7 +109,7 @@ fun LibrarySongRow(
                     Icon(
                         imageVector = if (row.isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
                         contentDescription = "favorite",
-                        tint = if (row.isFavorite) Accent else TextSecondary
+                        tint = if (row.isFavorite) colors.accent else colors.textSecondary
                     )
                 }
                 Text(row.durationText)

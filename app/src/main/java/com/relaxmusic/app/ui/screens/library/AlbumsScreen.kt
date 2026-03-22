@@ -23,8 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.relaxmusic.app.domain.model.Album
-import com.relaxmusic.app.ui.theme.Accent
-import com.relaxmusic.app.ui.theme.TextSecondary
+import com.relaxmusic.app.ui.theme.RelaxMusicColors
 
 @Composable
 fun AlbumsScreen(
@@ -32,6 +31,7 @@ fun AlbumsScreen(
     onBack: () -> Unit,
     onOpenAlbum: (Album) -> Unit
 ) {
+    val colors = RelaxMusicColors
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -43,7 +43,7 @@ fun AlbumsScreen(
                 Icon(Icons.Rounded.ArrowBack, contentDescription = "back")
             }
             Text("专辑", style = MaterialTheme.typography.headlineMedium)
-            Text("${albums.size} 张", color = TextSecondary, modifier = Modifier.padding(top = 12.dp))
+            Text("${albums.size} 张", color = colors.textSecondary, modifier = Modifier.padding(top = 12.dp))
         }
 
         LazyColumn(
@@ -55,7 +55,7 @@ fun AlbumsScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.72f)),
+                    colors = CardDefaults.cardColors(containerColor = colors.panelSurface),
                     onClick = { onOpenAlbum(album) }
                 ) {
                     Row(
@@ -64,10 +64,10 @@ fun AlbumsScreen(
                             .padding(horizontal = 16.dp, vertical = 14.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Icon(Icons.Rounded.Album, contentDescription = "album", tint = Accent)
+                        Icon(Icons.Rounded.Album, contentDescription = "album", tint = colors.accent)
                         Column {
                             Text(album.name, style = MaterialTheme.typography.titleMedium)
-                            Text("${album.artist} · ${album.songs.size} 首", color = TextSecondary)
+                            Text("${album.artist} · ${album.songs.size} 首", color = colors.textSecondary)
                         }
                     }
                 }

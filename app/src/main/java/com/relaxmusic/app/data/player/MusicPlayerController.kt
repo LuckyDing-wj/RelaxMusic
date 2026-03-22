@@ -6,39 +6,50 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import com.relaxmusic.app.domain.model.PlayMode
 
-class MusicPlayerController(context: Context) {
+class MusicPlayerController(context: Context) : PlayerController {
     private val player = ExoPlayer.Builder(context).build()
     val exoPlayer: ExoPlayer
         get() = player
 
-    fun setQueue(mediaItems: List<MediaItem>, startIndex: Int) {
+    override fun setQueue(mediaItems: List<MediaItem>, startIndex: Int) {
         player.setMediaItems(mediaItems, startIndex, 0L)
         player.prepare()
         player.play()
     }
 
-    fun togglePlayPause() {
+    override fun replaceQueue(
+        mediaItems: List<MediaItem>,
+        startIndex: Int,
+        startPositionMs: Long,
+        shouldPlay: Boolean
+    ) {
+        player.setMediaItems(mediaItems, startIndex, startPositionMs.coerceAtLeast(0L))
+        player.prepare()
+        player.playWhenReady = shouldPlay
+    }
+
+    override fun togglePlayPause() {
         if (player.isPlaying) player.pause() else player.play()
     }
 
-    fun seekTo(positionMs: Long) {
+    override fun seekTo(positionMs: Long) {
         player.seekTo(positionMs.coerceAtLeast(0L))
     }
 
-    fun playNext() {
+    override fun playNext() {
         player.seekToNextMediaItem()
     }
 
-    fun playPrevious() {
+    override fun playPrevious() {
         player.seekToPreviousMediaItem()
     }
 
-    fun stop() {
-        player.pause()
-        player.seekTo(0L)
+    override fun stop() {
+        player.stop()
+        player.clearMediaItems()
     }
 
-    fun setPlayMode(mode: PlayMode) {
+    override fun setPlayMode(mode: PlayMode) {
         when (mode) {
             PlayMode.SEQUENCE -> {
                 player.repeatMode = Player.REPEAT_MODE_OFF
@@ -62,23 +73,23 @@ class MusicPlayerController(context: Context) {
         }
     }
 
-    fun currentIndex(): Int = player.currentMediaItemIndex
+    override fun currentIndex(): Int = player.currentMediaItemIndex
 
-    fun isPlaying(): Boolean = player.isPlaying
+    override fun isPlaying(): Boolean = player.isPlaying
 
-    fun currentPosition(): Long = player.currentPosition
+    override fun currentPosition(): Long = player.currentPosition
 
-    fun duration(): Long = player.duration.takeIf { it >= 0 } ?: 0L
+    override fun duration(): Long = player.duration.takeIf { it >= 0 } ?: 0L
 
-    fun addListener(listener: Player.Listener) {
+    override fun addListener(listener: Player.Listener) {
         player.addListener(listener)
     }
 
-    fun removeListener(listener: Player.Listener) {
+    override fun removeListener(listener: Player.Listener) {
         player.removeListener(listener)
     }
 
-    fun release() {
+    override fun release() {
         player.release()
     }
 }

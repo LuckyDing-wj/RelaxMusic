@@ -54,15 +54,51 @@ import androidx.compose.ui.unit.dp
 import com.relaxmusic.app.domain.model.LyricLine
 import com.relaxmusic.app.domain.model.PlayMode
 import com.relaxmusic.app.domain.model.Song
-import com.relaxmusic.app.ui.theme.Accent
-import com.relaxmusic.app.ui.theme.PanelBorder
-import com.relaxmusic.app.ui.theme.TextSecondary
+import com.relaxmusic.app.ui.theme.RelaxMusicColors
 import com.relaxmusic.app.utils.TimeFormatter
 
-private enum class CenterContentState {
+enum class CenterContentMode {
     ARTWORK,
     LYRICS,
     NO_LYRICS
+}
+
+fun CenterContentMode.normalize(hasLyrics: Boolean): CenterContentMode {
+    return when {
+        this == CenterContentMode.NO_LYRICS && hasLyrics -> CenterContentMode.LYRICS
+        this == CenterContentMode.LYRICS && !hasLyrics -> CenterContentMode.NO_LYRICS
+        else -> this
+    }
+}
+
+fun CenterContentMode.nextOnTap(hasLyrics: Boolean): CenterContentMode {
+    return when (this) {
+        CenterContentMode.ARTWORK -> if (hasLyrics) CenterContentMode.LYRICS else CenterContentMode.NO_LYRICS
+        CenterContentMode.LYRICS,
+        CenterContentMode.NO_LYRICS -> CenterContentMode.ARTWORK
+    }
+}
+
+fun formatSleepTimerRemainingDescription(remainSeconds: Long): String {
+    if (remainSeconds <= 0) return "选择一个预设时间，到点后停止播放"
+    val minutes = remainSeconds / 60
+    val seconds = remainSeconds % 60
+    return when {
+        minutes > 0 && seconds > 0 -> "剩余 ${minutes} 分 ${seconds} 秒"
+        minutes > 0 -> "剩余 ${minutes} 分钟"
+        else -> "剩余 ${seconds} 秒"
+    }
+}
+
+fun formatSleepTimerRemainingButtonLabel(remainSeconds: Long): String {
+    if (remainSeconds <= 0) return "定时"
+    val minutes = remainSeconds / 60
+    val seconds = remainSeconds % 60
+    return when {
+        minutes > 0 && seconds > 0 -> "剩余 ${minutes}m ${seconds}s"
+        minutes > 0 -> "剩余 ${minutes}m"
+        else -> "剩余 ${seconds}s"
+    }
 }
 
 private fun playModeLabel(raw: String): String {
@@ -77,7 +113,11 @@ private fun playModeLabel(raw: String): String {
 
 @Composable
 fun NowPlayingScreen(
-    state: PlayerUiState,
+    artworkState: NowPlayingArtworkUiState,
+    lyricsState: NowPlayingLyricsUiState,
+    trackState: NowPlayingTrackUiState,
+    progressState: NowPlayingProgressUiState,
+    controlsState: NowPlayingControlsUiState,
     onBack: () -> Unit,
     onTogglePlay: () -> Unit,
     onNext: () -> Unit,
@@ -87,7 +127,15 @@ fun NowPlayingScreen(
     onOpenTimer: () -> Unit,
     onOpenQueue: () -> Unit
 ) {
-    var centerContentState by remember(state.currentSong?.id) { mutableStateOf(CenterContentState.ARTWORK) }
+    val colors = RelaxMusicColors
+    var centerContentMode by remember(artworkState.currentSong?.id) { mutableStateOf(CenterContentMode.ARTWORK) }
+    val resolvedCenterContentMode = centerContentMode.normalize(hasLyrics = lyricsState.lyrics.isNotEmpty())
+
+    LaunchedEffect(resolvedCenterContentMode) {
+        if (centerContentMode != resolvedCenterContentMode) {
+            centerContentMode = resolvedCenterContentMode
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -97,39 +145,47 @@ fun NowPlayingScreen(
     ) {
         NowPlayingHeader(onBack = onBack, onOpenTimer = onOpenTimer)
 
-        CenterContentArea(
-            currentSong = state.currentSong,
-            lyrics = state.lyrics,
-            currentLyricIndex = state.currentLyricIndex,
-            isPlaying = state.isPlaying,
-            contentState = centerContentState,
-            onToggleContent = {
-                centerContentState = when (centerContentState) {
-                    CenterContentState.ARTWORK -> {
-                        if (state.lyrics.isNotEmpty()) CenterContentState.LYRICS else CenterContentState.NO_LYRICS
-                    }
-                    CenterContentState.LYRICS,
-                    CenterContentState.NO_LYRICS -> CenterContentState.ARTWORK
+        when (resolvedCenterContentMode) {
+            CenterContentMode.ARTWORK -> ArtworkCenterCard(
+                isPlaying = artworkState.isPlaying,
+                colors = colors,
+                onToggleContent = {
+                    centerContentMode = resolvedCenterContentMode.nextOnTap(hasLyrics = lyricsState.lyrics.isNotEmpty())
                 }
-            }
-        )
+            )
+            CenterContentMode.LYRICS -> LyricsCenterCard(
+                lyrics = lyricsState.lyrics,
+                currentLyricIndex = lyricsState.currentLyricIndex,
+                colors = colors,
+                onToggleContent = {
+                    centerContentMode = resolvedCenterContentMode.nextOnTap(hasLyrics = lyricsState.lyrics.isNotEmpty())
+                }
+            )
+            CenterContentMode.NO_LYRICS -> NoLyricsCenterCard(
+                currentSong = artworkState.currentSong,
+                colors = colors,
+                onToggleContent = {
+                    centerContentMode = resolvedCenterContentMode.nextOnTap(hasLyrics = lyricsState.lyrics.isNotEmpty())
+                }
+            )
+        }
 
         TrackMetaSection(
-            currentSong = state.currentSong,
-            isPlaying = state.isPlaying
+            currentSong = trackState.currentSong,
+            isPlaying = trackState.isPlaying
         )
 
         ProgressSection(
-            progress = state.progress,
-            progressMs = state.progressMs,
-            durationMs = state.durationMs,
+            progress = progressState.progress,
+            progressMs = progressState.progressMs,
+            durationMs = progressState.durationMs,
             onChangeProgress = onChangeProgress
         )
 
         PlaybackControlsSection(
-            playMode = state.playMode,
-            isPlaying = state.isPlaying,
-            sleepTimerRemaining = state.sleepTimerRemaining,
+            playMode = controlsState.playMode,
+            isPlaying = controlsState.isPlaying,
+            sleepTimerRemaining = controlsState.sleepTimerRemaining,
             onCyclePlayMode = onCyclePlayMode,
             onPrevious = onPrevious,
             onTogglePlay = onTogglePlay,
@@ -161,30 +217,59 @@ private fun NowPlayingHeader(
 }
 
 @Composable
-private fun CenterContentArea(
-    currentSong: Song?,
-    lyrics: List<LyricLine>,
-    currentLyricIndex: Int,
+private fun ArtworkCenterCard(
     isPlaying: Boolean,
-    contentState: CenterContentState,
+    colors: com.relaxmusic.app.ui.theme.RelaxMusicColorPalette,
     onToggleContent: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onToggleContent),
         shape = RoundedCornerShape(28.dp),
-        border = BorderStroke(1.dp, PanelBorder),
-        colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.7f))
+        border = BorderStroke(1.dp, colors.panelBorder),
+        colors = CardDefaults.cardColors(containerColor = colors.panelSurface)
     ) {
-        when (contentState) {
-            CenterContentState.ARTWORK -> ArtworkContent(isPlaying = isPlaying)
-            CenterContentState.LYRICS -> LyricsContent(lyrics = lyrics, currentLyricIndex = currentLyricIndex)
-            CenterContentState.NO_LYRICS -> NoLyricsContent(currentSong = currentSong)
-        }
+        ArtworkContent(isPlaying = isPlaying, colors = colors)
     }
 }
 
 @Composable
-private fun ArtworkContent(isPlaying: Boolean) {
+private fun LyricsCenterCard(
+    lyrics: List<LyricLine>,
+    currentLyricIndex: Int,
+    colors: com.relaxmusic.app.ui.theme.RelaxMusicColorPalette,
+    onToggleContent: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onToggleContent),
+        shape = RoundedCornerShape(28.dp),
+        border = BorderStroke(1.dp, colors.panelBorder),
+        colors = CardDefaults.cardColors(containerColor = colors.panelSurface)
+    ) {
+        LyricsContent(lyrics = lyrics, currentLyricIndex = currentLyricIndex, colors = colors)
+    }
+}
+
+@Composable
+private fun NoLyricsCenterCard(
+    currentSong: Song?,
+    colors: com.relaxmusic.app.ui.theme.RelaxMusicColorPalette,
+    onToggleContent: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onToggleContent),
+        shape = RoundedCornerShape(28.dp),
+        border = BorderStroke(1.dp, colors.panelBorder),
+        colors = CardDefaults.cardColors(containerColor = colors.panelSurface)
+    ) {
+        NoLyricsContent(currentSong = currentSong, colors = colors)
+    }
+}
+
+@Composable
+private fun ArtworkContent(
+    isPlaying: Boolean,
+    colors: com.relaxmusic.app.ui.theme.RelaxMusicColorPalette
+) {
     val albumArtScale = if (isPlaying) {
         rememberInfiniteTransition(label = "album-art").animateFloat(
             initialValue = 1f,
@@ -206,17 +291,18 @@ private fun ArtworkContent(isPlaying: Boolean) {
             .padding(18.dp)
             .scale(albumArtScale)
             .clip(RoundedCornerShape(24.dp))
-            .background(Accent.copy(alpha = 0.16f)),
+            .background(colors.accent.copy(alpha = 0.16f)),
         contentAlignment = Alignment.Center
     ) {
-        Text("Album Art", color = TextSecondary)
+        Text("Album Art", color = colors.textSecondary)
     }
 }
 
 @Composable
 private fun LyricsContent(
     lyrics: List<LyricLine>,
-    currentLyricIndex: Int
+    currentLyricIndex: Int,
+    colors: com.relaxmusic.app.ui.theme.RelaxMusicColorPalette
 ) {
     val lyricListState = rememberLazyListState()
 
@@ -244,7 +330,7 @@ private fun LyricsContent(
         itemsIndexed(lyrics) { index, line ->
             Text(
                 text = line.text,
-                color = if (index == currentLyricIndex) Accent else TextSecondary,
+                color = if (index == currentLyricIndex) colors.accent else colors.textSecondary,
                 style = if (index == currentLyricIndex) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center
@@ -254,21 +340,24 @@ private fun LyricsContent(
 }
 
 @Composable
-private fun NoLyricsContent(currentSong: Song?) {
+private fun NoLyricsContent(
+    currentSong: Song?,
+    colors: com.relaxmusic.app.ui.theme.RelaxMusicColorPalette
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(320.dp)
             .padding(18.dp)
             .clip(RoundedCornerShape(24.dp))
-            .background(Accent.copy(alpha = 0.08f)),
+            .background(colors.accent.copy(alpha = 0.08f)),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("无歌词", style = MaterialTheme.typography.headlineMedium, color = Accent)
+            Text("无歌词", style = MaterialTheme.typography.headlineMedium, color = colors.accent)
             Text(
                 text = currentSong?.let { "当前歌曲未找到本地歌词" } ?: "当前没有歌曲",
-                color = TextSecondary,
+                color = colors.textSecondary,
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center
             )
@@ -281,6 +370,7 @@ private fun TrackMetaSection(
     currentSong: Song?,
     isPlaying: Boolean
 ) {
+    val colors = RelaxMusicColors
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(
             text = currentSong?.title ?: "还没有开始播放",
@@ -293,7 +383,7 @@ private fun TrackMetaSection(
         )
         Text(
             text = currentSong?.let { "${it.artist} · ${it.album}" } ?: "从曲库中选择一首歌开始",
-            color = TextSecondary,
+            color = colors.textSecondary,
             style = MaterialTheme.typography.bodyLarge,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -309,8 +399,18 @@ private fun ProgressSection(
     durationMs: Long,
     onChangeProgress: (Float) -> Unit
 ) {
+    var pendingProgress by remember { mutableStateOf<Float?>(null) }
+    val sliderValue = pendingProgress ?: progress
+
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Slider(value = progress, onValueChange = onChangeProgress)
+        Slider(
+            value = sliderValue,
+            onValueChange = { pendingProgress = it },
+            onValueChangeFinished = {
+                pendingProgress?.let(onChangeProgress)
+                pendingProgress = null
+            }
+        )
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(TimeFormatter.formatSongDuration(progressMs))
             Text(TimeFormatter.formatSongDuration(durationMs))
@@ -330,6 +430,7 @@ private fun PlaybackControlsSection(
     onOpenQueue: () -> Unit,
     onOpenTimer: () -> Unit
 ) {
+    val colors = RelaxMusicColors
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -355,10 +456,10 @@ private fun PlaybackControlsSection(
                 Icon(Icons.Rounded.QueueMusic, contentDescription = "queue")
             }
             Button(onClick = onOpenTimer) {
-                Text(if (sleepTimerRemaining > 0) "剩余 ${sleepTimerRemaining / 60}m" else "定时")
+                Text(formatSleepTimerRemainingButtonLabel(sleepTimerRemaining))
             }
         }
 
-        Text("播放模式: ${playModeLabel(playMode.name)}", color = TextSecondary)
+        Text("播放模式: ${playModeLabel(playMode.name)}", color = colors.textSecondary)
     }
 }

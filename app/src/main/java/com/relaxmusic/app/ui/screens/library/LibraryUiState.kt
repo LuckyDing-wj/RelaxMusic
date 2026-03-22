@@ -22,9 +22,5 @@ data class LibraryUiState(
     val query: String = "",
     val statusMessage: String = "请选择一个本地音乐目录开始。",
     val errorMessage: String? = null,
-    val currentSongId: String? = null,
-    val selectedPlaylistId: Long? = null,
-    val selectedPlaylistSongs: List<Song> = emptyList(),
-    val selectedAlbumName: String? = null,
-    val selectedArtistName: String? = null
+    val currentSongId: String? = null
 )

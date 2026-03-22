@@ -1,13 +1,11 @@
 package com.relaxmusic.app.ui
 
-import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -15,61 +13,38 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import com.relaxmusic.app.RelaxMusicApplication
 import com.relaxmusic.app.data.local.UriPermissionManager
-import com.relaxmusic.app.service.PlaybackService
 import com.relaxmusic.app.ui.components.BottomNavigationBar
 import com.relaxmusic.app.ui.components.PlayerBar
 import com.relaxmusic.app.ui.components.SleepTimerSheet
 import com.relaxmusic.app.ui.components.TopLevelDestination
-import com.relaxmusic.app.ui.screens.library.AlbumsScreen
-import com.relaxmusic.app.ui.screens.library.ArtistsScreen
-import com.relaxmusic.app.ui.screens.library.CollectionScreen
-import com.relaxmusic.app.ui.screens.library.FullLibraryScreen
-import com.relaxmusic.app.ui.screens.library.GroupDetailScreen
-import com.relaxmusic.app.ui.screens.library.LibraryScreen
+import com.relaxmusic.app.ui.navigation.RelaxMusicDestination
+import com.relaxmusic.app.ui.navigation.RelaxMusicNavGraph
 import com.relaxmusic.app.ui.screens.library.LibraryViewModel
 import com.relaxmusic.app.ui.screens.library.LibraryViewModelFactory
-import com.relaxmusic.app.ui.screens.library.PlaylistDetailScreen
-import com.relaxmusic.app.ui.screens.library.PlaylistsScreen
-import com.relaxmusic.app.ui.screens.nowplaying.NowPlayingScreen
 import com.relaxmusic.app.ui.screens.nowplaying.PlayerViewModel
 import com.relaxmusic.app.ui.screens.nowplaying.PlayerViewModelFactory
-import com.relaxmusic.app.ui.screens.nowplaying.QueueScreen
-import com.relaxmusic.app.ui.screens.settings.SettingsScreen
 import com.relaxmusic.app.ui.screens.settings.SettingsViewModel
-import com.relaxmusic.app.ui.theme.AppBackgroundEnd
-import com.relaxmusic.app.ui.theme.AppBackgroundStart
-
-private enum class Destination {
-    LIBRARY,
-    FULL_LIBRARY,
-    ALBUMS,
-    ALBUM_DETAIL,
-    ARTISTS,
-    ARTIST_DETAIL,
-    PLAYLISTS,
-    PLAYLIST_DETAIL,
-    FAVORITES,
-    RECENT,
-    QUEUE,
-    NOW_PLAYING,
-    SETTINGS
-}
+import com.relaxmusic.app.ui.screens.settings.SettingsViewModelFactory
+import com.relaxmusic.app.ui.theme.RelaxMusicColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,6 +53,7 @@ fun RelaxMusicApp() {
     val application = context.applicationContext as RelaxMusicApplication
     val uriPermissionManager = remember { UriPermissionManager() }
     val backupManager = application.appContainer.backupManager
+    val navController = rememberNavController()
 
     val libraryViewModel: LibraryViewModel = viewModel(
         factory = LibraryViewModelFactory(application.appContainer.libraryRepository)
@@ -85,28 +61,18 @@ fun RelaxMusicApp() {
     val playerViewModel: PlayerViewModel = viewModel(
         factory = PlayerViewModelFactory(application.appContainer.playerRepository)
     )
-    val settingsViewModel: SettingsViewModel = viewModel()
+    val settingsViewModel: SettingsViewModel = viewModel(
+        factory = SettingsViewModelFactory(application.appContainer.settingsRepository)
+    )
+
     val libraryUiState by libraryViewModel.state.collectAsState()
+    val currentBackStackEntry by navController.currentBackStackEntryAsState()
 
-    var destination by remember { mutableStateOf(Destination.LIBRARY) }
-    var topLevelDestination by remember { mutableStateOf<TopLevelDestination>(TopLevelDestination.HOME) }
+    var topLevelDestination by remember { mutableStateOf(TopLevelDestination.HOME) }
     var timerSheetVisible by remember { mutableStateOf(false) }
-
-    val switchTopLevelDestination: (TopLevelDestination) -> Unit = { topLevel ->
-        topLevelDestination = topLevel
-        destination = when (topLevel) {
-            TopLevelDestination.HOME -> Destination.LIBRARY
-            TopLevelDestination.PLAYLISTS -> Destination.PLAYLISTS
-            TopLevelDestination.HISTORY -> Destination.RECENT
-            TopLevelDestination.SETTINGS -> Destination.SETTINGS
-        }
-    }
+    val colors = RelaxMusicColors
 
     LaunchedEffect(Unit) {
-        ContextCompat.startForegroundService(
-            context,
-            Intent(context, PlaybackService::class.java)
-        )
         playerViewModel.bindContext(context)
     }
 
@@ -114,14 +80,34 @@ fun RelaxMusicApp() {
         libraryViewModel.setCurrentSong(playerViewModel.uiState.currentSong?.id)
     }
 
+    LaunchedEffect(currentBackStackEntry?.destination?.route) {
+        RelaxMusicDestination.topLevelDestinationForRoute(currentBackStackEntry?.destination?.route)?.let { topLevel ->
+            topLevelDestination = topLevel
+        }
+    }
+
     val pickFolderLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()
     ) { uri: Uri? ->
         if (uri != null) {
             uriPermissionManager.takePersistablePermission(context, uri)
-            val label = uri.toString()
-            libraryViewModel.onFolderPicked(label)
-            settingsViewModel.onFolderPicked(label)
+            libraryViewModel.onFolderPicked(uri.toString())
+        }
+    }
+
+    val navigateToTopLevel: (TopLevelDestination) -> Unit = { topLevel ->
+        val route = when (topLevel) {
+            TopLevelDestination.HOME -> RelaxMusicDestination.Home.route
+            TopLevelDestination.PLAYLISTS -> RelaxMusicDestination.Playlists.route
+            TopLevelDestination.HISTORY -> RelaxMusicDestination.History.route
+            TopLevelDestination.SETTINGS -> RelaxMusicDestination.Settings.route
+        }
+        navController.navigate(route) {
+            popUpTo(navController.graph.findStartDestination().id) {
+                saveState = true
+            }
+            launchSingleTop = true
+            restoreState = true
         }
     }
 
@@ -129,7 +115,7 @@ fun RelaxMusicApp() {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Brush.verticalGradient(listOf(AppBackgroundStart, AppBackgroundEnd)))
+                .background(Brush.verticalGradient(listOf(colors.appBackgroundStart, colors.appBackgroundEnd)))
         ) {
             Scaffold(
                 containerColor = androidx.compose.ui.graphics.Color.Transparent,
@@ -140,253 +126,76 @@ fun RelaxMusicApp() {
                             isPlaying = playerViewModel.miniPlayerIsPlaying,
                             progress = playerViewModel.miniPlayerProgress,
                             onTogglePlay = playerViewModel::togglePlay,
-                            onOpenNowPlaying = { destination = Destination.NOW_PLAYING },
+                            onOpenNowPlaying = {
+                                navController.navigate(RelaxMusicDestination.NowPlaying.route) {
+                                    launchSingleTop = true
+                                }
+                            },
                             onOpenTimer = { timerSheetVisible = true },
-                            onOpenQueue = { destination = Destination.QUEUE }
+                            onOpenQueue = {
+                                navController.navigate(RelaxMusicDestination.Queue.route) {
+                                    launchSingleTop = true
+                                }
+                            }
                         )
                         BottomNavigationBar(
                             current = topLevelDestination,
-                            onSelect = switchTopLevelDestination
+                            onSelect = navigateToTopLevel
                         )
                     }
                 }
             ) { padding ->
                 Box(modifier = Modifier.padding(padding)) {
-                    when (destination) {
-                        Destination.LIBRARY -> LibraryScreen(
-                            state = libraryUiState,
-                            onPickFolder = { pickFolderLauncher.launch(null) },
-                            onRemoveFolder = {
-                                libraryViewModel.removeFolder(it)
-                                settingsViewModel.onFolderRemoved(it)
-                            },
-                            onRescan = libraryViewModel::rescan,
-                            onOpenFullLibrary = { destination = Destination.FULL_LIBRARY },
-                            onOpenAlbums = { destination = Destination.ALBUMS },
-                            onOpenArtists = { destination = Destination.ARTISTS },
-                            onOpenPlaylists = { destination = Destination.PLAYLISTS },
-                            onOpenFavorites = { destination = Destination.FAVORITES },
-                            onOpenRecent = { destination = Destination.RECENT },
-                            onOpenSettings = { destination = Destination.SETTINGS }
-                        )
-
-                        Destination.FULL_LIBRARY -> FullLibraryScreen(
-                            songs = libraryUiState.songs,
-                            playlists = libraryUiState.playlists,
-                            currentSongId = libraryUiState.currentSongId,
-                            query = libraryUiState.query,
-                            onBack = { switchTopLevelDestination(TopLevelDestination.HOME) },
-                            onQueryChange = libraryViewModel::onQueryChange,
-                            onSongClick = { song ->
-                                playerViewModel.playSong(song, libraryUiState.songs)
-                                libraryViewModel.setCurrentSong(song.id)
-                                libraryViewModel.markSongPlayed(song.id)
-                                destination = Destination.NOW_PLAYING
-                            },
-                            onToggleFavorite = libraryViewModel::toggleFavorite,
-                            onAddSongToPlaylist = libraryViewModel::addSongToPlaylist
-                        )
-
-                        Destination.ALBUMS -> AlbumsScreen(
-                            albums = libraryUiState.albums,
-                            onBack = { switchTopLevelDestination(TopLevelDestination.HOME) },
-                            onOpenAlbum = { album ->
-                                libraryViewModel.selectAlbum(album.name)
-                                destination = Destination.ALBUM_DETAIL
-                            }
-                        )
-
-                        Destination.ALBUM_DETAIL -> GroupDetailScreen(
-                            title = libraryUiState.selectedAlbumName ?: "专辑",
-                            songs = libraryUiState.albums.firstOrNull { it.name == libraryUiState.selectedAlbumName }?.songs.orEmpty(),
-                            currentSongId = libraryUiState.currentSongId,
-                            playlists = libraryUiState.playlists,
-                            onBack = { destination = Destination.ALBUMS },
-                            onSongClick = { song ->
-                                val queue = libraryUiState.albums.firstOrNull { it.name == libraryUiState.selectedAlbumName }?.songs.orEmpty()
-                                playerViewModel.playSong(song, queue)
-                                libraryViewModel.setCurrentSong(song.id)
-                                libraryViewModel.markSongPlayed(song.id)
-                                destination = Destination.NOW_PLAYING
-                            },
-                            onToggleFavorite = libraryViewModel::toggleFavorite,
-                            onAddSongToPlaylist = libraryViewModel::addSongToPlaylist
-                        )
-
-                        Destination.ARTISTS -> ArtistsScreen(
-                            artists = libraryUiState.artists,
-                            onBack = { switchTopLevelDestination(TopLevelDestination.HOME) },
-                            onOpenArtist = { artist ->
-                                libraryViewModel.selectArtist(artist.name)
-                                destination = Destination.ARTIST_DETAIL
-                            }
-                        )
-
-                        Destination.ARTIST_DETAIL -> GroupDetailScreen(
-                            title = libraryUiState.selectedArtistName ?: "艺术家",
-                            songs = libraryUiState.artists.firstOrNull { it.name == libraryUiState.selectedArtistName }?.songs.orEmpty(),
-                            currentSongId = libraryUiState.currentSongId,
-                            playlists = libraryUiState.playlists,
-                            onBack = { destination = Destination.ARTISTS },
-                            onSongClick = { song ->
-                                val queue = libraryUiState.artists.firstOrNull { it.name == libraryUiState.selectedArtistName }?.songs.orEmpty()
-                                playerViewModel.playSong(song, queue)
-                                libraryViewModel.setCurrentSong(song.id)
-                                libraryViewModel.markSongPlayed(song.id)
-                                destination = Destination.NOW_PLAYING
-                            },
-                            onToggleFavorite = libraryViewModel::toggleFavorite,
-                            onAddSongToPlaylist = libraryViewModel::addSongToPlaylist
-                        )
-
-                        Destination.PLAYLISTS -> PlaylistsScreen(
-                            playlists = libraryUiState.playlists,
-                            onBack = { switchTopLevelDestination(TopLevelDestination.HOME) },
-                            onCreatePlaylist = libraryViewModel::createPlaylist,
-                            onRenamePlaylist = libraryViewModel::renamePlaylist,
-                            onDeletePlaylist = libraryViewModel::deletePlaylist,
-                            showBackButton = false,
-                            onOpenPlaylist = { playlist ->
-                                libraryViewModel.selectPlaylist(playlist)
-                                destination = Destination.PLAYLIST_DETAIL
-                            }
-                        )
-
-                        Destination.PLAYLIST_DETAIL -> PlaylistDetailScreen(
-                            playlist = libraryUiState.playlists.firstOrNull { it.id == libraryUiState.selectedPlaylistId },
-                            playlistSongs = libraryUiState.selectedPlaylistSongs,
-                            allSongs = libraryUiState.songs,
-                            currentSongId = libraryUiState.currentSongId,
-                            onBack = { destination = Destination.PLAYLISTS },
-                            onSongClick = { song ->
-                                playerViewModel.playSong(song, libraryUiState.selectedPlaylistSongs)
-                                libraryViewModel.setCurrentSong(song.id)
-                                libraryViewModel.markSongPlayed(song.id)
-                                destination = Destination.NOW_PLAYING
-                            },
-                            onToggleFavorite = libraryViewModel::toggleFavorite,
-                            onAddSong = { songId ->
-                                libraryUiState.selectedPlaylistId?.let { playlistId ->
-                                    libraryViewModel.addSongToPlaylist(playlistId, songId)
-                                }
-                            },
-                            onRemoveSong = { songId ->
-                                libraryUiState.selectedPlaylistId?.let { playlistId ->
-                                    libraryViewModel.removeSongFromPlaylist(playlistId, songId)
-                                }
-                            },
-                            onRenamePlaylist = libraryViewModel::renamePlaylist,
-                            onDeletePlaylist = libraryViewModel::deletePlaylist
-                        )
-
-                        Destination.FAVORITES -> CollectionScreen(
-                            title = "我的收藏",
-                            songs = libraryUiState.favoriteSongs,
-                            playlists = libraryUiState.playlists,
-                            currentSongId = libraryUiState.currentSongId,
-                            onBack = { switchTopLevelDestination(TopLevelDestination.HOME) },
-                            onSongClick = { song ->
-                                playerViewModel.playSong(song, libraryUiState.favoriteSongs)
-                                libraryViewModel.setCurrentSong(song.id)
-                                libraryViewModel.markSongPlayed(song.id)
-                                destination = Destination.NOW_PLAYING
-                            },
-                            onToggleFavorite = libraryViewModel::toggleFavorite,
-                            onAddSongToPlaylist = libraryViewModel::addSongToPlaylist,
-                            showBackButton = false,
-                            emptyMessageAction = { destination = Destination.LIBRARY }
-                        )
-
-                        Destination.RECENT -> CollectionScreen(
-                            title = "播放历史",
-                            songs = libraryUiState.historySongs,
-                            playlists = libraryUiState.playlists,
-                            currentSongId = libraryUiState.currentSongId,
-                            onBack = { switchTopLevelDestination(TopLevelDestination.HOME) },
-                            onSongClick = { song ->
-                                playerViewModel.playSong(song, libraryUiState.historySongs)
-                                libraryViewModel.setCurrentSong(song.id)
-                                libraryViewModel.markSongPlayed(song.id)
-                                destination = Destination.NOW_PLAYING
-                            },
-                            onToggleFavorite = libraryViewModel::toggleFavorite,
-                            onAddSongToPlaylist = libraryViewModel::addSongToPlaylist,
-                            showBackButton = false,
-                            emptyMessageAction = { destination = Destination.LIBRARY }
-                        )
-
-                        Destination.NOW_PLAYING -> NowPlayingScreen(
-                            state = playerViewModel.uiState,
-                            onBack = { destination = Destination.LIBRARY },
-                            onTogglePlay = playerViewModel::togglePlay,
-                            onNext = playerViewModel::next,
-                            onPrevious = playerViewModel::previous,
-                            onChangeProgress = playerViewModel::seekTo,
-                            onCyclePlayMode = playerViewModel::cyclePlayMode,
-                            onOpenTimer = { timerSheetVisible = true },
-                            onOpenQueue = { destination = Destination.QUEUE }
-                        )
-
-                        Destination.QUEUE -> QueueScreen(
-                            queue = playerViewModel.uiState.queue,
-                            currentIndex = playerViewModel.uiState.currentIndex,
-                            onBack = { destination = Destination.NOW_PLAYING },
-                            onSongClick = { song ->
-                                playerViewModel.playQueueSong(song.id)
-                                libraryViewModel.setCurrentSong(song.id)
-                                destination = Destination.NOW_PLAYING
-                            },
-                            onRemove = playerViewModel::removeFromQueue
-                        )
-
-                        Destination.SETTINGS -> SettingsScreen(
-                            state = settingsViewModel.uiState,
-                            onBack = { switchTopLevelDestination(TopLevelDestination.HOME) },
-                            onPickFolder = { pickFolderLauncher.launch(null) },
-                            onRemoveFolder = {
-                                libraryViewModel.removeFolder(it)
-                                settingsViewModel.onFolderRemoved(it)
-                            },
-                            onExportBackup = {
-                                CoroutineScope(Dispatchers.Main).launch {
-                                    val result = backupManager.exportBackup()
-                                    settingsViewModel.setBackupStatus(
-                                        result.fold(
-                                            onSuccess = { "已导出到: $it" },
-                                            onFailure = { "导出失败: ${it.message}" }
-                                        )
+                    RelaxMusicNavGraph(
+                        navController = navController,
+                        libraryUiState = libraryUiState,
+                        settingsUiState = settingsViewModel.uiState,
+                        libraryViewModel = libraryViewModel,
+                        playerViewModel = playerViewModel,
+                        settingsViewModel = settingsViewModel,
+                        onPickFolder = { pickFolderLauncher.launch(null) },
+                        onOpenTimer = { timerSheetVisible = true },
+                        onExportBackup = {
+                            CoroutineScope(Dispatchers.Main).launch {
+                                val result = backupManager.exportBackup()
+                                settingsViewModel.setBackupStatus(
+                                    result.fold(
+                                        onSuccess = { "已导出到: $it" },
+                                        onFailure = { "导出失败: ${it.message}" }
                                     )
-                                }
-                            },
-                            onImportBackup = {
-                                CoroutineScope(Dispatchers.Main).launch {
-                                    val result = backupManager.importBackup()
-                                    settingsViewModel.setBackupStatus(
-                                        result.fold(
-                                            onSuccess = { "已导入备份: $it" },
-                                            onFailure = { "导入失败: ${it.message}" }
-                                        )
+                                )
+                            }
+                        },
+                        onImportBackup = {
+                            CoroutineScope(Dispatchers.Main).launch {
+                                val result = backupManager.importBackup()
+                                settingsViewModel.setBackupStatus(
+                                    result.fold(
+                                        onSuccess = { "已导入备份: $it" },
+                                        onFailure = { "导入失败: ${it.message}" }
                                     )
-                                    libraryViewModel.rescan()
-                                }
-                            },
-                            showBackButton = false,
-                            onUseEmbeddedTheme = settingsViewModel::toggleThemeFollowSystem
-                        )
-                    }
+                                )
+                                libraryViewModel.rescan()
+                            }
+                        }
+                    )
                 }
             }
 
             if (timerSheetVisible) {
                 ModalBottomSheet(
                     onDismissRequest = { timerSheetVisible = false },
-                    containerColor = com.relaxmusic.app.ui.theme.PanelBackground
+                    containerColor = colors.panelBackground
                 ) {
                     SleepTimerSheet(
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
                         remainSeconds = playerViewModel.uiState.sleepTimerRemaining,
                         onPresetClick = { minutes ->
                             playerViewModel.startSleepTimer(minutes)
+                            timerSheetVisible = false
+                        },
+                        onCustomConfirm = { totalMinutes ->
+                            playerViewModel.startSleepTimerForMinutes(totalMinutes)
                             timerSheetVisible = false
                         },
                         onCancelTimer = {
