@@ -74,6 +74,7 @@ fun PlaylistsScreen(
         }
 
         Text("歌单", style = MaterialTheme.typography.headlineMedium)
+        Text("管理你的自建歌单。", color = colors.textSecondary)
 
         if (playlists.isEmpty()) {
             Text("还没有歌单，先创建一个吧。", color = colors.textSecondary)

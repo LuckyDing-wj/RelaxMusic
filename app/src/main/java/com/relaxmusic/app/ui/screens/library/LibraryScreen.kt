@@ -11,15 +11,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Album
-import androidx.compose.material.icons.rounded.ArrowForward
-import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.History
-import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.MusicNote
-import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Refresh
-import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -27,7 +23,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -50,11 +45,9 @@ fun LibraryScreen(
     onRemoveFolder: (String) -> Unit,
     onRescan: () -> Unit,
     onOpenLibrary: () -> Unit,
-    onOpenAlbums: () -> Unit,
-    onOpenArtists: () -> Unit,
-    onOpenPlaylists: () -> Unit,
-    onOpenFavorites: () -> Unit,
     onOpenRecent: () -> Unit,
+    onOpenQueue: () -> Unit,
+    onOpenTimer: () -> Unit,
     onOpenNowPlaying: () -> Unit,
     onOpenSettings: () -> Unit
 ) {
@@ -65,10 +58,6 @@ fun LibraryScreen(
         isPlaying = isPlaying,
         playbackProgress = playbackProgress
     )
-    val favoriteCountText = "${state.favoriteSongs.size} 首已标记"
-    val playlistSubtitle = if (state.playlists.isEmpty()) "还没有歌单" else "${state.playlists.size} 个歌单"
-    val albumsSubtitle = if (state.albums.isEmpty()) "暂无专辑" else "${state.albums.size} 张"
-    val artistsSubtitle = if (state.artists.isEmpty()) "暂无艺术家" else "${state.artists.size} 位"
 
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
@@ -143,20 +132,6 @@ fun LibraryScreen(
         }
 
         item {
-            OutlinedTextField(
-                value = "搜索歌曲、艺术家、专辑",
-                onValueChange = {},
-                modifier = Modifier.fillMaxWidth(),
-                leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = "search") },
-                trailingIcon = { Icon(Icons.Rounded.ArrowForward, contentDescription = "open library") },
-                shape = RoundedCornerShape(18.dp),
-                label = { Text("搜索入口") },
-                singleLine = true,
-                readOnly = true
-            )
-        }
-
-        item {
             ContinuePlaybackCard(
                 title = dashboardModel.continueTitle,
                 subtitle = dashboardModel.continueSubtitle,
@@ -172,43 +147,8 @@ fun LibraryScreen(
             QuickInfoCard(
                 title = dashboardModel.libraryEntryTitle,
                 subtitle = dashboardModel.libraryEntrySubtitle,
-                icon = { Icon(Icons.Rounded.MusicNote, contentDescription = "full library", tint = colors.accent) },
+                icon = { Icon(Icons.Rounded.MusicNote, contentDescription = "library", tint = colors.accent) },
                 onClick = onOpenLibrary,
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-
-        if (state.favoriteSongs.isNotEmpty() || dashboardModel.showRecentSection) {
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    if (state.favoriteSongs.isNotEmpty()) {
-                        QuickInfoCard(
-                            title = "收藏",
-                            subtitle = favoriteCountText,
-                            icon = { Icon(Icons.Rounded.Favorite, contentDescription = "favorites", tint = colors.accent) },
-                            onClick = onOpenFavorites,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                    if (dashboardModel.showRecentSection) {
-                        QuickInfoCard(
-                            title = "最近播放",
-                            subtitle = dashboardModel.recentSubtitle,
-                            icon = { Icon(Icons.Rounded.History, contentDescription = "recent", tint = colors.accent) },
-                            onClick = onOpenRecent,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-            }
-        }
-
-        item {
-            QuickInfoCard(
-                title = "歌单",
-                subtitle = playlistSubtitle,
-                icon = { Icon(Icons.Rounded.LibraryMusic, contentDescription = "playlists", tint = colors.accent) },
-                onClick = onOpenPlaylists,
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -216,18 +156,30 @@ fun LibraryScreen(
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 QuickInfoCard(
-                    title = "专辑",
-                    subtitle = albumsSubtitle,
-                    icon = { Icon(Icons.Rounded.Album, contentDescription = "albums", tint = colors.accent) },
-                    onClick = onOpenAlbums,
+                    title = "播放队列",
+                    subtitle = "查看当前待播列表",
+                    icon = { Icon(Icons.Rounded.QueueMusic, contentDescription = "queue", tint = colors.accent) },
+                    onClick = onOpenQueue,
                     modifier = Modifier.weight(1f)
                 )
                 QuickInfoCard(
-                    title = "艺术家",
-                    subtitle = artistsSubtitle,
-                    icon = { Icon(Icons.Rounded.Person, contentDescription = "artists", tint = colors.accent) },
-                    onClick = onOpenArtists,
+                    title = "睡眠定时",
+                    subtitle = "设置自动停止播放",
+                    icon = { Icon(Icons.Rounded.Bedtime, contentDescription = "sleep timer", tint = colors.accent) },
+                    onClick = onOpenTimer,
                     modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
+        if (dashboardModel.showRecentSection) {
+            item {
+                QuickInfoCard(
+                    title = "最近播放",
+                    subtitle = dashboardModel.recentSubtitle,
+                    icon = { Icon(Icons.Rounded.History, contentDescription = "recent", tint = colors.accent) },
+                    onClick = onOpenRecent,
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }
@@ -235,14 +187,6 @@ fun LibraryScreen(
         if (state.totalSongCount == 0) {
             item {
                 EmptyLibraryView(onPickFolder = onPickFolder, modifier = Modifier.fillMaxWidth())
-            }
-        } else {
-            item {
-                Text(
-                    text = "首页只展示摘要和入口，完整歌曲列表已移到“浏览曲库”。",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = colors.textSecondary
-                )
             }
         }
     }

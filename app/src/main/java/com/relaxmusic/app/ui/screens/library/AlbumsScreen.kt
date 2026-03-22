@@ -42,9 +42,10 @@ fun AlbumsScreen(
             IconButton(onClick = onBack) {
                 Icon(Icons.Rounded.ArrowBack, contentDescription = "back")
             }
-            Text("专辑", style = MaterialTheme.typography.headlineMedium)
             Text("${albums.size} 张", color = colors.textSecondary, modifier = Modifier.padding(top = 12.dp))
         }
+        Text("专辑", style = MaterialTheme.typography.headlineMedium)
+        Text("按专辑浏览曲库内容。", color = colors.textSecondary)
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),

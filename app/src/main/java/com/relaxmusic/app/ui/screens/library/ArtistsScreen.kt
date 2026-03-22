@@ -42,9 +42,10 @@ fun ArtistsScreen(
             IconButton(onClick = onBack) {
                 Icon(Icons.Rounded.ArrowBack, contentDescription = "back")
             }
-            Text("艺术家", style = MaterialTheme.typography.headlineMedium)
             Text("${artists.size} 位", color = colors.textSecondary, modifier = Modifier.padding(top = 12.dp))
         }
+        Text("艺术家", style = MaterialTheme.typography.headlineMedium)
+        Text("按艺术家浏览曲库内容。", color = colors.textSecondary)
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
