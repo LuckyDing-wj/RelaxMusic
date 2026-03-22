@@ -5,9 +5,11 @@ import com.relaxmusic.app.ui.components.TopLevelDestination
 
 sealed class RelaxMusicDestination(val route: String) {
     object Home : RelaxMusicDestination("home")
+    object LibraryHub : RelaxMusicDestination("library")
     object FullLibrary : RelaxMusicDestination("full-library")
     object Albums : RelaxMusicDestination("albums")
     object Artists : RelaxMusicDestination("artists")
+    object ListsHub : RelaxMusicDestination("lists")
     object Playlists : RelaxMusicDestination("playlists")
     object Favorites : RelaxMusicDestination("favorites")
     object History : RelaxMusicDestination("history")
@@ -47,21 +49,24 @@ sealed class RelaxMusicDestination(val route: String) {
         fun topLevelDestinationForRoute(route: String?): TopLevelDestination? {
             return when {
                 route == null -> null
-                route == Home.route ||
+                route == Home.route -> TopLevelDestination.HOME
+
+                route == LibraryHub.route ||
                     route == FullLibrary.route ||
                     route == Albums.route ||
                     route == Artists.route ||
-                    route == Favorites.route ||
                     route == AlbumDetail.route ||
                     route == ArtistDetail.route ||
                     route.startsWith("${AlbumDetail.BASE_ROUTE}/") ||
-                    route.startsWith("${ArtistDetail.BASE_ROUTE}/") -> TopLevelDestination.HOME
+                    route.startsWith("${ArtistDetail.BASE_ROUTE}/") -> TopLevelDestination.LIBRARY
 
-                route == Playlists.route ||
+                route == ListsHub.route ||
+                    route == Playlists.route ||
+                    route == Favorites.route ||
+                    route == History.route ||
                     route == PlaylistDetail.route ||
-                    route.startsWith("${PlaylistDetail.BASE_ROUTE}/") -> TopLevelDestination.PLAYLISTS
+                    route.startsWith("${PlaylistDetail.BASE_ROUTE}/") -> TopLevelDestination.LISTS
 
-                route == History.route -> TopLevelDestination.HISTORY
                 route == Settings.route -> TopLevelDestination.SETTINGS
                 else -> null
             }

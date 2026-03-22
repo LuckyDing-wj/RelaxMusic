@@ -98,8 +98,8 @@ fun RelaxMusicApp() {
     val navigateToTopLevel: (TopLevelDestination) -> Unit = { topLevel ->
         val route = when (topLevel) {
             TopLevelDestination.HOME -> RelaxMusicDestination.Home.route
-            TopLevelDestination.PLAYLISTS -> RelaxMusicDestination.Playlists.route
-            TopLevelDestination.HISTORY -> RelaxMusicDestination.History.route
+            TopLevelDestination.LIBRARY -> RelaxMusicDestination.LibraryHub.route
+            TopLevelDestination.LISTS -> RelaxMusicDestination.ListsHub.route
             TopLevelDestination.SETTINGS -> RelaxMusicDestination.Settings.route
         }
         navController.navigate(route) {

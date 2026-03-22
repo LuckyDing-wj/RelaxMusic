@@ -1,9 +1,9 @@
 package com.relaxmusic.app.ui.components
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.LibraryMusic
+import androidx.compose.material.icons.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -13,8 +13,8 @@ import androidx.compose.runtime.Composable
 
 enum class TopLevelDestination {
     HOME,
-    PLAYLISTS,
-    HISTORY,
+    LIBRARY,
+    LISTS,
     SETTINGS
 }
 
@@ -31,16 +31,16 @@ fun BottomNavigationBar(
             label = { Text("首页") }
         )
         NavigationBarItem(
-            selected = current == TopLevelDestination.PLAYLISTS,
-            onClick = { onSelect(TopLevelDestination.PLAYLISTS) },
-            icon = { Icon(Icons.Rounded.LibraryMusic, contentDescription = "歌单") },
-            label = { Text("歌单") }
+            selected = current == TopLevelDestination.LIBRARY,
+            onClick = { onSelect(TopLevelDestination.LIBRARY) },
+            icon = { Icon(Icons.Rounded.LibraryMusic, contentDescription = "曲库") },
+            label = { Text("曲库") }
         )
         NavigationBarItem(
-            selected = current == TopLevelDestination.HISTORY,
-            onClick = { onSelect(TopLevelDestination.HISTORY) },
-            icon = { Icon(Icons.Rounded.History, contentDescription = "历史") },
-            label = { Text("历史") }
+            selected = current == TopLevelDestination.LISTS,
+            onClick = { onSelect(TopLevelDestination.LISTS) },
+            icon = { Icon(Icons.Rounded.QueueMusic, contentDescription = "列表") },
+            label = { Text("列表") }
         )
         NavigationBarItem(
             selected = current == TopLevelDestination.SETTINGS,

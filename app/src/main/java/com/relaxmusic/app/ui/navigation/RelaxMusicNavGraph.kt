@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.material3.Text
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -58,8 +59,8 @@ fun RelaxMusicNavGraph(
     fun navigateToTopLevel(destination: TopLevelDestination) {
         val route = when (destination) {
             TopLevelDestination.HOME -> RelaxMusicDestination.Home.route
-            TopLevelDestination.PLAYLISTS -> RelaxMusicDestination.Playlists.route
-            TopLevelDestination.HISTORY -> RelaxMusicDestination.History.route
+            TopLevelDestination.LIBRARY -> RelaxMusicDestination.LibraryHub.route
+            TopLevelDestination.LISTS -> RelaxMusicDestination.ListsHub.route
             TopLevelDestination.SETTINGS -> RelaxMusicDestination.Settings.route
         }
         navController.navigate(route) {
@@ -84,11 +85,19 @@ fun RelaxMusicNavGraph(
                 onOpenFullLibrary = { navController.navigate(RelaxMusicDestination.FullLibrary.route) },
                 onOpenAlbums = { navController.navigate(RelaxMusicDestination.Albums.route) },
                 onOpenArtists = { navController.navigate(RelaxMusicDestination.Artists.route) },
-                onOpenPlaylists = { navigateToTopLevel(TopLevelDestination.PLAYLISTS) },
+                onOpenPlaylists = { navController.navigate(RelaxMusicDestination.Playlists.route) },
                 onOpenFavorites = { navController.navigate(RelaxMusicDestination.Favorites.route) },
-                onOpenRecent = { navigateToTopLevel(TopLevelDestination.HISTORY) },
+                onOpenRecent = { navController.navigate(RelaxMusicDestination.History.route) },
                 onOpenSettings = { navigateToTopLevel(TopLevelDestination.SETTINGS) }
             )
+        }
+
+        composable(RelaxMusicDestination.LibraryHub.route) {
+            Text("曲库")
+        }
+
+        composable(RelaxMusicDestination.ListsHub.route) {
+            Text("列表")
         }
 
         composable(RelaxMusicDestination.FullLibrary.route) {
