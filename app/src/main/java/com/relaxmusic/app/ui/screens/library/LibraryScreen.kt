@@ -24,6 +24,7 @@ import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -31,10 +32,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.relaxmusic.app.domain.model.Song
 import com.relaxmusic.app.ui.components.EmptyLibraryView
 import com.relaxmusic.app.ui.components.ScanProgressCard
 import com.relaxmusic.app.ui.theme.RelaxMusicColors
@@ -42,6 +43,9 @@ import com.relaxmusic.app.ui.theme.RelaxMusicColors
 @Composable
 fun LibraryScreen(
     state: LibraryUiState,
+    currentSong: Song?,
+    isPlaying: Boolean,
+    playbackProgress: Float,
     onPickFolder: () -> Unit,
     onRemoveFolder: (String) -> Unit,
     onRescan: () -> Unit,
@@ -51,22 +55,20 @@ fun LibraryScreen(
     onOpenPlaylists: () -> Unit,
     onOpenFavorites: () -> Unit,
     onOpenRecent: () -> Unit,
+    onOpenNowPlaying: () -> Unit,
     onOpenSettings: () -> Unit
 ) {
     val colors = RelaxMusicColors
-    val favoriteCountText = remember(state.favoriteSongs.size) { "${state.favoriteSongs.size} 首已标记" }
-    val recentSubtitle = remember(state.recentSongs) {
-        state.recentSongs.take(2).joinToString(" / ") { it.title }
-    }
-    val playlistSubtitle = remember(state.playlists.size) {
-        if (state.playlists.isEmpty()) "还没有歌单" else "${state.playlists.size} 个歌单"
-    }
-    val albumsSubtitle = remember(state.albums.size) {
-        if (state.albums.isEmpty()) "暂无专辑" else "${state.albums.size} 张"
-    }
-    val artistsSubtitle = remember(state.artists.size) {
-        if (state.artists.isEmpty()) "暂无艺术家" else "${state.artists.size} 位"
-    }
+    val dashboardModel = buildHomeDashboardModel(
+        libraryState = state,
+        currentSong = currentSong,
+        isPlaying = isPlaying,
+        playbackProgress = playbackProgress
+    )
+    val favoriteCountText = "${state.favoriteSongs.size} 首已标记"
+    val playlistSubtitle = if (state.playlists.isEmpty()) "还没有歌单" else "${state.playlists.size} 个歌单"
+    val albumsSubtitle = if (state.albums.isEmpty()) "暂无专辑" else "${state.albums.size} 张"
+    val artistsSubtitle = if (state.artists.isEmpty()) "暂无艺术家" else "${state.artists.size} 位"
 
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
@@ -155,16 +157,28 @@ fun LibraryScreen(
         }
 
         item {
+            ContinuePlaybackCard(
+                title = dashboardModel.continueTitle,
+                subtitle = dashboardModel.continueSubtitle,
+                progress = dashboardModel.continueProgress,
+                isPlaying = isPlaying,
+                enabled = currentSong != null,
+                onClick = onOpenNowPlaying,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        item {
             QuickInfoCard(
-                title = "完整曲库",
-                subtitle = if (state.totalSongCount == 0) "还没有歌曲" else "浏览全部 ${state.totalSongCount} 首歌曲",
+                title = dashboardModel.libraryEntryTitle,
+                subtitle = dashboardModel.libraryEntrySubtitle,
                 icon = { Icon(Icons.Rounded.MusicNote, contentDescription = "full library", tint = colors.accent) },
                 onClick = onOpenFullLibrary,
                 modifier = Modifier.fillMaxWidth()
             )
         }
 
-        if (state.favoriteSongs.isNotEmpty() || state.recentSongs.isNotEmpty()) {
+        if (state.favoriteSongs.isNotEmpty() || dashboardModel.showRecentSection) {
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     if (state.favoriteSongs.isNotEmpty()) {
@@ -176,10 +190,10 @@ fun LibraryScreen(
                             modifier = Modifier.weight(1f)
                         )
                     }
-                    if (state.recentSongs.isNotEmpty()) {
+                    if (dashboardModel.showRecentSection) {
                         QuickInfoCard(
                             title = "最近播放",
-                            subtitle = recentSubtitle,
+                            subtitle = dashboardModel.recentSubtitle,
                             icon = { Icon(Icons.Rounded.History, contentDescription = "recent", tint = colors.accent) },
                             onClick = onOpenRecent,
                             modifier = Modifier.weight(1f)
@@ -225,11 +239,61 @@ fun LibraryScreen(
         } else {
             item {
                 Text(
-                    text = "首页只展示摘要和入口，完整歌曲列表已移到“完整曲库”。",
+                    text = "首页只展示摘要和入口，完整歌曲列表已移到“浏览曲库”。",
                     style = MaterialTheme.typography.bodyMedium,
                     color = colors.textSecondary
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun ContinuePlaybackCard(
+    title: String,
+    subtitle: String,
+    progress: Float,
+    isPlaying: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colors = RelaxMusicColors
+    Surface(
+        modifier = modifier.then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier),
+        shape = RoundedCornerShape(20.dp),
+        color = colors.panelSurfaceStrong,
+        tonalElevation = 0.dp,
+        border = BorderStroke(1.dp, colors.panelBorder)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = if (enabled && isPlaying) "正在播放" else "继续播放",
+                style = MaterialTheme.typography.labelLarge,
+                color = colors.accent
+            )
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = colors.textSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            LinearProgressIndicator(
+                progress = { progress.coerceIn(0f, 1f) },
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }

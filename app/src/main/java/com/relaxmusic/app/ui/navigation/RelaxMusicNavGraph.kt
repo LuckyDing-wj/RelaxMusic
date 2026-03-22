@@ -79,6 +79,9 @@ fun RelaxMusicNavGraph(
         composable(RelaxMusicDestination.Home.route) {
             LibraryScreen(
                 state = libraryUiState,
+                currentSong = playerViewModel.miniPlayerSong,
+                isPlaying = playerViewModel.miniPlayerIsPlaying,
+                playbackProgress = playerViewModel.miniPlayerProgress,
                 onPickFolder = onPickFolder,
                 onRemoveFolder = libraryViewModel::removeFolder,
                 onRescan = libraryViewModel::rescan,
@@ -88,6 +91,7 @@ fun RelaxMusicNavGraph(
                 onOpenPlaylists = { navController.navigate(RelaxMusicDestination.Playlists.route) },
                 onOpenFavorites = { navController.navigate(RelaxMusicDestination.Favorites.route) },
                 onOpenRecent = { navController.navigate(RelaxMusicDestination.History.route) },
+                onOpenNowPlaying = ::navigateToNowPlaying,
                 onOpenSettings = { navigateToTopLevel(TopLevelDestination.SETTINGS) }
             )
         }
