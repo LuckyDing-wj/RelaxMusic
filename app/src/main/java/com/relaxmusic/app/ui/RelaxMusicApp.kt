@@ -130,12 +130,6 @@ fun RelaxMusicApp() {
                                 navController.navigate(RelaxMusicDestination.NowPlaying.route) {
                                     launchSingleTop = true
                                 }
-                            },
-                            onOpenTimer = { timerSheetVisible = true },
-                            onOpenQueue = {
-                                navController.navigate(RelaxMusicDestination.Queue.route) {
-                                    launchSingleTop = true
-                                }
                             }
                         )
                         BottomNavigationBar(

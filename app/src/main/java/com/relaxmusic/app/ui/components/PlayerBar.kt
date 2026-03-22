@@ -10,11 +10,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.PauseCircle
 import androidx.compose.material.icons.rounded.PlayCircle
-import androidx.compose.material.icons.rounded.QueueMusic
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -29,7 +27,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.relaxmusic.app.domain.model.Song
 import com.relaxmusic.app.ui.theme.RelaxMusicColors
-import com.relaxmusic.app.utils.TimeFormatter
 
 @Composable
 fun PlayerBar(
@@ -37,21 +34,19 @@ fun PlayerBar(
     isPlaying: Boolean,
     progress: Float,
     onTogglePlay: () -> Unit,
-    onOpenNowPlaying: () -> Unit,
-    onOpenTimer: () -> Unit,
-    onOpenQueue: () -> Unit
+    onOpenNowPlaying: () -> Unit
 ) {
     val colors = RelaxMusicColors
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
             .clickable(onClick = onOpenNowPlaying),
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = colors.panelSurfaceStrong),
         border = BorderStroke(1.dp, colors.panelBorder)
     ) {
-        Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -62,18 +57,16 @@ fun PlayerBar(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    if (song != null) {
-                        Icon(
-                            imageVector = if (isPlaying) Icons.Rounded.GraphicEq else Icons.Rounded.PlayCircle,
-                            contentDescription = "playback state",
-                            tint = colors.accent
-                        )
-                    }
+                    Icon(
+                        imageVector = if (song != null && isPlaying) Icons.Rounded.GraphicEq else Icons.Rounded.PlayCircle,
+                        contentDescription = "playback state",
+                        tint = if (song != null) colors.accent else colors.textSecondary
+                    )
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = song?.title ?: "还没有播放歌曲",
                             style = MaterialTheme.typography.titleMedium,
-                            color = if (song != null) colors.accent else MaterialTheme.colorScheme.onSurface,
+                            color = MaterialTheme.colorScheme.onSurface,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.fillMaxWidth().then(
@@ -82,40 +75,25 @@ fun PlayerBar(
                         )
                         Text(
                             text = song?.artist ?: "选择本地音乐后即可开始",
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.bodySmall,
                             color = colors.textSecondary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
-                        if (song != null) {
-                            Text(
-                                text = "本地文件 · ${TimeFormatter.formatSongDuration(song.duration)}",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = colors.textSecondary
-                            )
-                        }
                     }
                 }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onOpenQueue) {
-                        Icon(Icons.Rounded.QueueMusic, contentDescription = "queue")
-                    }
-                    IconButton(onClick = onOpenTimer) {
-                        Icon(Icons.Rounded.Bedtime, contentDescription = "sleep timer")
-                    }
-                    IconButton(onClick = onTogglePlay) {
-                        Icon(
-                            imageVector = if (isPlaying) Icons.Rounded.PauseCircle else Icons.Rounded.PlayCircle,
-                            contentDescription = "toggle playback"
-                        )
-                    }
+                IconButton(onClick = onTogglePlay) {
+                    Icon(
+                        imageVector = if (isPlaying) Icons.Rounded.PauseCircle else Icons.Rounded.PlayCircle,
+                        contentDescription = "toggle playback"
+                    )
                 }
             }
             LinearProgressIndicator(
                 progress = { progress.coerceIn(0f, 1f) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 10.dp)
+                    .padding(top = 8.dp)
             )
         }
     }
