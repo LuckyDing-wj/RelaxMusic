@@ -12,18 +12,27 @@ interface SongLyricLoader {
 }
 
 class LyricLoader(
-    private val parser: LrcParser = LrcParser()
+    private val parser: LrcParser = LrcParser(),
+    private val embeddedLyricsReader: EmbeddedLyricsReader = EmbeddedLyricsReader()
 ) : SongLyricLoader {
     override suspend fun load(context: Context, songUri: String, fileName: String): List<LyricLine> = withContext(Dispatchers.IO) {
         val document = DocumentFile.fromSingleUri(context, Uri.parse(songUri)) ?: return@withContext emptyList()
         val parent = document.parentFile ?: return@withContext emptyList()
         val targetName = fileName.substringBeforeLast('.', fileName) + ".lrc"
         val lyricFile = parent.listFiles().firstOrNull { it.isFile && it.name.equals(targetName, ignoreCase = true) }
-            ?: return@withContext emptyList()
+
+        val externalLyrics = lyricFile?.let {
+            runCatching {
+                context.contentResolver.openInputStream(it.uri)?.bufferedReader()?.use { reader ->
+                    parser.parse(reader.readText())
+                }.orEmpty()
+            }.getOrElse { emptyList() }
+        }.orEmpty()
+        if (externalLyrics.isNotEmpty()) return@withContext externalLyrics
 
         runCatching {
-            context.contentResolver.openInputStream(lyricFile.uri)?.bufferedReader()?.use { reader ->
-                parser.parse(reader.readText())
+            context.contentResolver.openInputStream(document.uri)?.use { input ->
+                embeddedLyricsReader.read(input)
             }.orEmpty()
         }.getOrElse { emptyList() }
     }

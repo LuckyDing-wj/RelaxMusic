@@ -7,7 +7,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material3.Button
@@ -22,6 +26,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.relaxmusic.app.domain.model.ThemeMode
@@ -39,9 +44,12 @@ fun SettingsScreen(
     onThemeModeChange: (ThemeMode) -> Unit
 ) {
     val colors = RelaxMusicColors
+    val scrollState = rememberScrollState()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(scrollState)
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -89,17 +97,26 @@ fun SettingsScreen(
         }
 
         SettingsCard(title = "界面") {
-            ThemeMode.entries.forEach { themeMode ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(themeMode.label)
-                    RadioButton(
-                        selected = state.themeMode == themeMode,
-                        onClick = { onThemeModeChange(themeMode) }
-                    )
+            Column(modifier = Modifier.selectableGroup()) {
+                ThemeMode.entries.forEach { themeMode ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .selectable(
+                                selected = state.themeMode == themeMode,
+                                onClick = { onThemeModeChange(themeMode) },
+                                role = Role.RadioButton
+                            )
+                            .padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(themeMode.label)
+                        RadioButton(
+                            selected = state.themeMode == themeMode,
+                            onClick = null
+                        )
+                    }
                 }
             }
         }
