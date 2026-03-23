@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.GraphicEq
+import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material.icons.rounded.PauseCircle
 import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material3.Card
@@ -33,10 +35,13 @@ fun PlayerBar(
     song: Song?,
     isPlaying: Boolean,
     progress: Float,
+    onPrevious: () -> Unit,
     onTogglePlay: () -> Unit,
+    onNext: () -> Unit,
     onOpenNowPlaying: () -> Unit
 ) {
     val colors = RelaxMusicColors
+    val hasSong = song != null
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -82,10 +87,28 @@ fun PlayerBar(
                         )
                     }
                 }
+                IconButton(
+                    onClick = onPrevious,
+                    enabled = hasSong
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.SkipPrevious,
+                        contentDescription = "previous track"
+                    )
+                }
                 IconButton(onClick = onTogglePlay) {
                     Icon(
                         imageVector = if (isPlaying) Icons.Rounded.PauseCircle else Icons.Rounded.PlayCircle,
                         contentDescription = "toggle playback"
+                    )
+                }
+                IconButton(
+                    onClick = onNext,
+                    enabled = hasSong
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.SkipNext,
+                        contentDescription = "next track"
                     )
                 }
             }

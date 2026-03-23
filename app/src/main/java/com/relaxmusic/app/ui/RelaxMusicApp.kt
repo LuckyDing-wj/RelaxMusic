@@ -67,6 +67,8 @@ fun RelaxMusicApp() {
 
     val libraryUiState by libraryViewModel.state.collectAsState()
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = currentBackStackEntry?.destination?.route
+    val showMiniPlayer = currentRoute != RelaxMusicDestination.NowPlaying.route
 
     var topLevelDestination by remember { mutableStateOf(TopLevelDestination.HOME) }
     var timerSheetVisible by remember { mutableStateOf(false) }
@@ -121,17 +123,21 @@ fun RelaxMusicApp() {
                 containerColor = androidx.compose.ui.graphics.Color.Transparent,
                 bottomBar = {
                     Column {
-                        PlayerBar(
-                            song = playerViewModel.miniPlayerSong,
-                            isPlaying = playerViewModel.miniPlayerIsPlaying,
-                            progress = playerViewModel.miniPlayerProgress,
-                            onTogglePlay = playerViewModel::togglePlay,
-                            onOpenNowPlaying = {
-                                navController.navigate(RelaxMusicDestination.NowPlaying.route) {
-                                    launchSingleTop = true
+                        if (showMiniPlayer) {
+                            PlayerBar(
+                                song = playerViewModel.miniPlayerSong,
+                                isPlaying = playerViewModel.miniPlayerIsPlaying,
+                                progress = playerViewModel.miniPlayerProgress,
+                                onPrevious = playerViewModel::previous,
+                                onTogglePlay = playerViewModel::togglePlay,
+                                onNext = playerViewModel::next,
+                                onOpenNowPlaying = {
+                                    navController.navigate(RelaxMusicDestination.NowPlaying.route) {
+                                        launchSingleTop = true
+                                    }
                                 }
-                            }
-                        )
+                            )
+                        }
                         BottomNavigationBar(
                             current = topLevelDestination,
                             onSelect = navigateToTopLevel
