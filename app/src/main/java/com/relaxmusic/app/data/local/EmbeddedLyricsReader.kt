@@ -1,5 +1,6 @@
 package com.relaxmusic.app.data.local
 
+import android.util.Log
 import com.relaxmusic.app.domain.model.LyricLine
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
@@ -10,14 +11,32 @@ class EmbeddedLyricsReader(
 ) {
     fun read(inputStream: InputStream): List<LyricLine> {
         val signature = inputStream.readExactlyOrNull(4) ?: return emptyList()
+        Log.d(TAG, "read: signature=${signature.joinToString("") { "%02X".format(it) }}")
 
         return when {
-            signature.copyOfRange(0, 3).contentEquals(ID3_SIGNATURE) -> {
-                val remainder = inputStream.readExactlyOrNull(6) ?: return emptyList()
-                parseId3(signature + remainder, inputStream)
+            signature.contentEquals(FLAC_SIGNATURE) -> {
+                Log.d(TAG, "read: detected pure FLAC format")
+                parseFlac(inputStream)
             }
-            signature.contentEquals(FLAC_SIGNATURE) -> parseFlac(inputStream)
-            else -> emptyList()
+            signature.copyOfRange(0, 3).contentEquals(ID3_SIGNATURE) -> {
+                Log.d(TAG, "read: detected ID3 format")
+                val remainder = inputStream.readExactlyOrNull(6) ?: return emptyList()
+                val id3Lyrics = parseId3(signature + remainder, inputStream)
+                if (id3Lyrics.isNotEmpty()) {
+                    Log.d(TAG, "read: found lyrics in ID3, count=${id3Lyrics.size}")
+                    id3Lyrics
+                } else {
+                    val nextSignature = inputStream.readExactlyOrNull(4) ?: return emptyList()
+                    if (nextSignature.contentEquals(FLAC_SIGNATURE)) {
+                        Log.d(TAG, "read: checking FLAC after ID3")
+                        parseFlac(inputStream)
+                    } else emptyList()
+                }
+            }
+            else -> {
+                Log.d(TAG, "read: unknown format, signature=${signature.joinToString("") { "%02X".format(it) }}")
+                emptyList()
+            }
         }
     }
 
@@ -36,6 +55,7 @@ class EmbeddedLyricsReader(
     }
 
     private fun parseFlac(inputStream: InputStream): List<LyricLine> {
+        var blockIndex = 0
         while (true) {
             val blockHeader = inputStream.readExactlyOrNull(4) ?: return emptyList()
             val isLastBlock = (blockHeader[0].toInt() and 0x80) != 0
@@ -44,13 +64,23 @@ class EmbeddedLyricsReader(
                 ((blockHeader[2].toInt() and 0xFF) shl 8) or
                 (blockHeader[3].toInt() and 0xFF)
 
+            Log.d(TAG, "parseFlac: block[$blockIndex] type=$blockType, length=$blockLength, isLast=$isLastBlock")
+
             val blockData = inputStream.readExactlyOrNull(blockLength) ?: return emptyList()
             if (blockType == FLAC_BLOCK_VORBIS_COMMENT) {
+                Log.d(TAG, "parseFlac: found Vorbis Comment block")
                 val lyrics = parseVorbisComment(blockData)
-                if (lyrics.isNotEmpty()) return lyrics
+                if (lyrics.isNotEmpty()) {
+                    Log.d(TAG, "parseFlac: found lyrics in Vorbis Comment, count=${lyrics.size}")
+                    return lyrics
+                }
             }
 
-            if (isLastBlock) return emptyList()
+            if (isLastBlock) {
+                Log.d(TAG, "parseFlac: reached last block, no lyrics found")
+                return emptyList()
+            }
+            blockIndex++
         }
     }
 
@@ -149,6 +179,7 @@ class EmbeddedLyricsReader(
         if (offset + 4 > blockData.size) return emptyList()
 
         val commentCount = decodeLittleEndianInt(blockData, offset)
+        Log.d(TAG, "parseVorbisComment: vendorLength=$vendorLength, commentCount=$commentCount")
         offset += 4
         if (commentCount < 0) return emptyList()
 
@@ -166,8 +197,10 @@ class EmbeddedLyricsReader(
             if (separatorIndex <= 0) return@repeat
 
             val key = rawComment.substring(0, separatorIndex).uppercase()
+            Log.d(TAG, "parseVorbisComment: found key='$key'")
             if (key !in SUPPORTED_VORBIS_LYRIC_KEYS) return@repeat
 
+            Log.d(TAG, "parseVorbisComment: matched lyrics key='$key', value length=${rawComment.length - separatorIndex - 1}")
             val lyrics = parseLyricsText(rawComment.substring(separatorIndex + 1))
             if (lyrics.isEmpty()) return@repeat
             if (lyrics.first().timeMs < UNTIMED_BASE_MS) return lyrics
@@ -304,6 +337,7 @@ class EmbeddedLyricsReader(
     }
 
     private companion object {
+        const val TAG = "EmbeddedLyricsReader"
         val ID3_SIGNATURE = byteArrayOf('I'.code.toByte(), 'D'.code.toByte(), '3'.code.toByte())
         val FLAC_SIGNATURE = byteArrayOf('f'.code.toByte(), 'L'.code.toByte(), 'a'.code.toByte(), 'C'.code.toByte())
         const val FRAME_HEADER_SIZE = 10
@@ -327,7 +361,11 @@ class EmbeddedLyricsReader(
             "SYNCEDLYRICS",
             "SYNCED LYRICS",
             "UNSYNCEDLYRICS",
-            "UNSYNCED LYRICS"
+            "UNSYNCED LYRICS",
+            "UNSYNCHRONISED LYRICS",
+            "UNSYNCHRONISEDELYRICS",
+            "SYNCHRONISED LYRICS",
+            "SYNCHRONISEDELYRICS"
         )
     }
 }
