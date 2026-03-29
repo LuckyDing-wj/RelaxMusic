@@ -17,11 +17,11 @@ import com.relaxmusic.app.ui.screens.library.CollectionScreen
 import com.relaxmusic.app.ui.screens.library.FullLibraryScreen
 import com.relaxmusic.app.ui.screens.library.GroupDetailScreen
 import com.relaxmusic.app.ui.screens.library.LibraryScreen
-import com.relaxmusic.app.ui.screens.library.LibraryHubScreen
 import com.relaxmusic.app.ui.screens.library.LibraryUiState
 import com.relaxmusic.app.ui.screens.library.LibraryViewModel
 import com.relaxmusic.app.ui.screens.library.PlaylistDetailScreen
 import com.relaxmusic.app.ui.screens.library.PlaylistsScreen
+import com.relaxmusic.app.ui.screens.nowplaying.NowPlayingScreen
 import com.relaxmusic.app.ui.screens.nowplaying.PlayerViewModel
 import com.relaxmusic.app.ui.screens.settings.SettingsScreen
 import com.relaxmusic.app.ui.screens.settings.SettingsUiState
@@ -36,8 +36,6 @@ fun RelaxMusicNavGraph(
     settingsViewModel: SettingsViewModel,
     onPickFolder: () -> Unit,
     onOpenTimer: () -> Unit,
-    onOpenNowPlaying: () -> Unit,
-    onOpenQueue: () -> Unit,
     onExportBackup: () -> Unit,
     onImportBackup: () -> Unit
 ) {
@@ -45,13 +43,12 @@ fun RelaxMusicNavGraph(
         playerViewModel.playSong(song, queue)
         libraryViewModel.setCurrentSong(song.id)
         libraryViewModel.markSongPlayed(song.id)
-        onOpenNowPlaying()
     }
 
     fun navigateToTopLevel(destination: TopLevelDestination) {
         val route = when (destination) {
             TopLevelDestination.HOME -> RelaxMusicDestination.Home.route
-            TopLevelDestination.LIBRARY -> RelaxMusicDestination.LibraryHub.route
+            TopLevelDestination.PLAYER -> RelaxMusicDestination.NowPlaying.route
             TopLevelDestination.LISTS -> RelaxMusicDestination.ListsHub.route
             TopLevelDestination.SETTINGS -> RelaxMusicDestination.Settings.route
         }
@@ -87,25 +84,27 @@ fun RelaxMusicNavGraph(
                 onOpenAlbums = { navController.navigate(RelaxMusicDestination.Albums.route) },
                 onOpenArtists = { navController.navigate(RelaxMusicDestination.Artists.route) },
                 onOpenPlaylists = { navController.navigate(RelaxMusicDestination.Playlists.route) },
-                onOpenLibrary = { navigateToTopLevel(TopLevelDestination.LIBRARY) },
                 onOpenRecent = { navController.navigate(RelaxMusicDestination.History.route) },
-                onOpenQueue = onOpenQueue,
-                onOpenTimer = onOpenTimer,
-                onOpenNowPlaying = onOpenNowPlaying,
+                onOpenNowPlaying = { navigateToTopLevel(TopLevelDestination.PLAYER) },
                 onOpenSettings = { navigateToTopLevel(TopLevelDestination.SETTINGS) },
                 onOpenFavorites = { navController.navigate(RelaxMusicDestination.Favorites.route) }
             )
         }
 
-        composable(RelaxMusicDestination.LibraryHub.route) {
-            LibraryHubScreen(
-                songCount = libraryUiState.allSongs.size,
-                albumCount = libraryUiState.albums.size,
-                artistCount = libraryUiState.artists.size,
-                onOpenSearch = { navController.navigate(RelaxMusicDestination.FullLibrary.route) },
-                onOpenFullLibrary = { navController.navigate(RelaxMusicDestination.FullLibrary.route) },
-                onOpenAlbums = { navController.navigate(RelaxMusicDestination.Albums.route) },
-                onOpenArtists = { navController.navigate(RelaxMusicDestination.Artists.route) }
+        composable(RelaxMusicDestination.NowPlaying.route) {
+            NowPlayingScreen(
+                artworkState = playerViewModel.nowPlayingArtworkUiState,
+                lyricsState = playerViewModel.nowPlayingLyricsUiState,
+                trackState = playerViewModel.nowPlayingTrackUiState,
+                progressState = playerViewModel.nowPlayingProgressUiState,
+                controlsState = playerViewModel.nowPlayingControlsUiState,
+                onBack = null,
+                onTogglePlay = playerViewModel::togglePlay,
+                onNext = playerViewModel::next,
+                onPrevious = playerViewModel::previous,
+                onChangeProgress = playerViewModel::seekTo,
+                onCyclePlayMode = playerViewModel::cyclePlayMode,
+                onOpenTimer = onOpenTimer
             )
         }
 
@@ -135,7 +134,7 @@ fun RelaxMusicNavGraph(
                 playlists = libraryUiState.playlists,
                 currentSongId = libraryUiState.currentSongId,
                 query = libraryUiState.query,
-                onBack = { navigateBackOrTopLevel(TopLevelDestination.LIBRARY) },
+                onBack = { navigateBackOrTopLevel(TopLevelDestination.HOME) },
                 onQueryChange = libraryViewModel::onQueryChange,
                 onSongClick = { song -> playSong(song, libraryUiState.songs) },
                 onToggleFavorite = libraryViewModel::toggleFavorite,
@@ -146,7 +145,7 @@ fun RelaxMusicNavGraph(
         composable(RelaxMusicDestination.Albums.route) {
             AlbumsScreen(
                 albums = libraryUiState.albums,
-                onBack = { navigateBackOrTopLevel(TopLevelDestination.LIBRARY) },
+                onBack = { navigateBackOrTopLevel(TopLevelDestination.HOME) },
                 onOpenAlbum = { album ->
                     navController.navigate(
                         RelaxMusicDestination.AlbumDetail.createRoute(
@@ -184,7 +183,7 @@ fun RelaxMusicNavGraph(
         composable(RelaxMusicDestination.Artists.route) {
             ArtistsScreen(
                 artists = libraryUiState.artists,
-                onBack = { navigateBackOrTopLevel(TopLevelDestination.LIBRARY) },
+                onBack = { navigateBackOrTopLevel(TopLevelDestination.HOME) },
                 onOpenArtist = { artist ->
                     navController.navigate(RelaxMusicDestination.ArtistDetail.createRoute(artist.name))
                 }

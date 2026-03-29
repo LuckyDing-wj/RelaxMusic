@@ -8,9 +8,7 @@ data class HomeDashboardModel(
     val continueProgress: Float,
     val showRecentSection: Boolean,
     val recentSongs: List<Song>,
-    val recentSubtitle: String,
-    val libraryEntryTitle: String,
-    val libraryEntrySubtitle: String
+    val recentSubtitle: String
 )
 
 internal fun buildHomeDashboardModel(
@@ -34,8 +32,6 @@ internal fun buildHomeDashboardModel(
             recentSongs.isEmpty() -> "播放后会出现在这里"
             recentSongs.size == 1 -> recentSongs.first().title
             else -> recentSongs.take(2).joinToString(" / ") { it.title }
-        },
-        libraryEntryTitle = "浏览曲库",
-        libraryEntrySubtitle = "全部歌曲、专辑、艺术家"
+        }
     )
 }

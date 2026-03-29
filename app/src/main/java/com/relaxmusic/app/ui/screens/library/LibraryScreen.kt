@@ -57,11 +57,7 @@ fun LibraryScreen(
     onRemoveFolder: (String) -> Unit,
     onRescan: () -> Unit,
     onOpenFullLibrary: () -> Unit,
-    onOpenLibrary: () -> Unit,
     onOpenRecent: () -> Unit,
-
-    onOpenQueue: () -> Unit,
-    onOpenTimer: () -> Unit,
     onOpenNowPlaying: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenFavorites: () -> Unit,

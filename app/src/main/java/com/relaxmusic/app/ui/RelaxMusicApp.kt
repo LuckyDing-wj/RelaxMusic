@@ -3,10 +3,8 @@ package com.relaxmusic.app.ui
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -35,22 +33,14 @@ import kotlinx.coroutines.launch
 import com.relaxmusic.app.RelaxMusicApplication
 import com.relaxmusic.app.data.local.UriPermissionManager
 import com.relaxmusic.app.ui.components.BottomNavigationBar
-import com.relaxmusic.app.ui.components.PlayerBar
 import com.relaxmusic.app.ui.components.SleepTimerSheet
 import com.relaxmusic.app.ui.components.TopLevelDestination
 import com.relaxmusic.app.ui.navigation.RelaxMusicDestination
 import com.relaxmusic.app.ui.navigation.RelaxMusicNavGraph
-import com.relaxmusic.app.ui.player.PlayerOverlayState
-import com.relaxmusic.app.ui.player.back
-import com.relaxmusic.app.ui.player.dismiss
-import com.relaxmusic.app.ui.player.openNowPlaying
-import com.relaxmusic.app.ui.player.openQueue
 import com.relaxmusic.app.ui.screens.library.LibraryViewModel
 import com.relaxmusic.app.ui.screens.library.LibraryViewModelFactory
-import com.relaxmusic.app.ui.screens.nowplaying.NowPlayingScreen
 import com.relaxmusic.app.ui.screens.nowplaying.PlayerViewModel
 import com.relaxmusic.app.ui.screens.nowplaying.PlayerViewModelFactory
-import com.relaxmusic.app.ui.screens.nowplaying.QueueScreen
 import com.relaxmusic.app.ui.screens.settings.SettingsViewModel
 import com.relaxmusic.app.ui.screens.settings.SettingsViewModelFactory
 import com.relaxmusic.app.ui.theme.RelaxMusicColors
@@ -79,8 +69,6 @@ fun RelaxMusicApp() {
 
     var topLevelDestination by remember { mutableStateOf(TopLevelDestination.HOME) }
     var timerSheetVisible by remember { mutableStateOf(false) }
-    var playerOverlayState by remember { mutableStateOf<PlayerOverlayState>(PlayerOverlayState.Hidden) }
-    val showMiniPlayer = playerOverlayState == PlayerOverlayState.Hidden
     val colors = RelaxMusicColors
 
     LaunchedEffect(Unit) {
@@ -107,10 +95,9 @@ fun RelaxMusicApp() {
     }
 
     val navigateToTopLevel: (TopLevelDestination) -> Unit = { topLevel ->
-        playerOverlayState = playerOverlayState.dismiss()
         val route = when (topLevel) {
             TopLevelDestination.HOME -> RelaxMusicDestination.Home.route
-            TopLevelDestination.LIBRARY -> RelaxMusicDestination.LibraryHub.route
+            TopLevelDestination.PLAYER -> RelaxMusicDestination.NowPlaying.route
             TopLevelDestination.LISTS -> RelaxMusicDestination.ListsHub.route
             TopLevelDestination.SETTINGS -> RelaxMusicDestination.Settings.route
         }
@@ -124,10 +111,6 @@ fun RelaxMusicApp() {
     }
 
     Surface(modifier = Modifier.fillMaxSize()) {
-        BackHandler(enabled = playerOverlayState != PlayerOverlayState.Hidden) {
-            playerOverlayState = playerOverlayState.back()
-        }
-
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -136,25 +119,10 @@ fun RelaxMusicApp() {
             Scaffold(
                 containerColor = Color.Transparent,
                 bottomBar = {
-                    Column {
-                        if (showMiniPlayer) {
-                            PlayerBar(
-                                song = playerViewModel.miniPlayerSong,
-                                isPlaying = playerViewModel.miniPlayerIsPlaying,
-                                progress = playerViewModel.miniPlayerProgress,
-                                onPrevious = playerViewModel::previous,
-                                onTogglePlay = playerViewModel::togglePlay,
-                                onNext = playerViewModel::next,
-                                onOpenNowPlaying = {
-                                    playerOverlayState = playerOverlayState.openNowPlaying()
-                                }
-                            )
-                        }
-                        BottomNavigationBar(
-                            current = topLevelDestination,
-                            onSelect = navigateToTopLevel
-                        )
-                    }
+                    BottomNavigationBar(
+                        current = topLevelDestination,
+                        onSelect = navigateToTopLevel
+                    )
                 }
             ) { padding ->
                 Box(modifier = Modifier.padding(padding)) {
@@ -167,12 +135,6 @@ fun RelaxMusicApp() {
                         settingsViewModel = settingsViewModel,
                         onPickFolder = { pickFolderLauncher.launch(null) },
                         onOpenTimer = { timerSheetVisible = true },
-                        onOpenNowPlaying = {
-                            playerOverlayState = playerOverlayState.openNowPlaying()
-                        },
-                        onOpenQueue = {
-                            playerOverlayState = playerOverlayState.openQueue()
-                        },
                         onExportBackup = {
                             CoroutineScope(Dispatchers.Main).launch {
                                 val result = backupManager.exportBackup()
@@ -197,63 +159,6 @@ fun RelaxMusicApp() {
                             }
                         }
                     )
-
-                    when (playerOverlayState) {
-                        PlayerOverlayState.Hidden -> Unit
-                        PlayerOverlayState.NowPlaying -> {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(
-                                        Brush.verticalGradient(
-                                            listOf(colors.appBackgroundStart, colors.appBackgroundEnd)
-                                        )
-                                    )
-                            ) {
-                                NowPlayingScreen(
-                                    artworkState = playerViewModel.nowPlayingArtworkUiState,
-                                    lyricsState = playerViewModel.nowPlayingLyricsUiState,
-                                    trackState = playerViewModel.nowPlayingTrackUiState,
-                                    progressState = playerViewModel.nowPlayingProgressUiState,
-                                    controlsState = playerViewModel.nowPlayingControlsUiState,
-                                    onBack = {
-                                        playerOverlayState = playerOverlayState.back()
-                                    },
-                                    onTogglePlay = playerViewModel::togglePlay,
-                                    onNext = playerViewModel::next,
-                                    onPrevious = playerViewModel::previous,
-                                    onChangeProgress = playerViewModel::seekTo,
-                                    onCyclePlayMode = playerViewModel::cyclePlayMode,
-                                    onOpenTimer = { timerSheetVisible = true }
-                                )
-                            }
-                        }
-                        PlayerOverlayState.Queue -> {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(
-                                        Brush.verticalGradient(
-                                            listOf(colors.appBackgroundStart, colors.appBackgroundEnd)
-                                        )
-                                    )
-                            ) {
-                                QueueScreen(
-                                    queue = playerViewModel.uiState.queue,
-                                    currentIndex = playerViewModel.uiState.currentIndex,
-                                    onBack = {
-                                        playerOverlayState = playerOverlayState.back()
-                                    },
-                                    onSongClick = { song ->
-                                        playerViewModel.playQueueSong(song.id)
-                                        libraryViewModel.setCurrentSong(song.id)
-                                        playerOverlayState = playerOverlayState.back()
-                                    },
-                                    onRemove = playerViewModel::removeFromQueue
-                                )
-                            }
-                        }
-                    }
                 }
             }
 

@@ -5,7 +5,7 @@ import com.relaxmusic.app.ui.components.TopLevelDestination
 
 sealed class RelaxMusicDestination(val route: String) {
     object Home : RelaxMusicDestination("home")
-    object LibraryHub : RelaxMusicDestination("library")
+    object NowPlaying : RelaxMusicDestination("player")
     object FullLibrary : RelaxMusicDestination("full-library")
     object Albums : RelaxMusicDestination("albums")
     object Artists : RelaxMusicDestination("artists")
@@ -48,15 +48,15 @@ sealed class RelaxMusicDestination(val route: String) {
             return when {
                 route == null -> null
                 route == Home.route -> TopLevelDestination.HOME
+                route == NowPlaying.route -> TopLevelDestination.PLAYER
 
-                route == LibraryHub.route ||
-                    route == FullLibrary.route ||
+                route == FullLibrary.route ||
                     route == Albums.route ||
                     route == Artists.route ||
                     route == AlbumDetail.route ||
                     route == ArtistDetail.route ||
                     route.startsWith("${AlbumDetail.BASE_ROUTE}/") ||
-                    route.startsWith("${ArtistDetail.BASE_ROUTE}/") -> TopLevelDestination.LIBRARY
+                    route.startsWith("${ArtistDetail.BASE_ROUTE}/") -> TopLevelDestination.HOME
 
                 route == ListsHub.route ||
                     route == Playlists.route ||

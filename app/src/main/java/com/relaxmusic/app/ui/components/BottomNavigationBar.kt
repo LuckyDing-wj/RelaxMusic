@@ -2,7 +2,7 @@ package com.relaxmusic.app.ui.components
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Home
-import androidx.compose.material.icons.rounded.LibraryMusic
+import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Icon
@@ -13,7 +13,7 @@ import androidx.compose.runtime.Composable
 
 enum class TopLevelDestination {
     HOME,
-    LIBRARY,
+    PLAYER,
     LISTS,
     SETTINGS
 }
@@ -31,10 +31,10 @@ fun BottomNavigationBar(
             label = { Text("首页") }
         )
         NavigationBarItem(
-            selected = current == TopLevelDestination.LIBRARY,
-            onClick = { onSelect(TopLevelDestination.LIBRARY) },
-            icon = { Icon(Icons.Rounded.LibraryMusic, contentDescription = "曲库") },
-            label = { Text("曲库") }
+            selected = current == TopLevelDestination.PLAYER,
+            onClick = { onSelect(TopLevelDestination.PLAYER) },
+            icon = { Icon(Icons.Rounded.PlayCircle, contentDescription = "播放") },
+            label = { Text("播放") }
         )
         NavigationBarItem(
             selected = current == TopLevelDestination.LISTS,

@@ -24,13 +24,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.Bedtime
+import androidx.compose.material.icons.rounded.AccessTime
 import androidx.compose.material.icons.rounded.FastForward
 import androidx.compose.material.icons.rounded.FastRewind
 import androidx.compose.material.icons.rounded.MusicNote
@@ -56,6 +58,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -123,7 +126,7 @@ fun NowPlayingScreen(
     trackState: NowPlayingTrackUiState,
     progressState: NowPlayingProgressUiState,
     controlsState: NowPlayingControlsUiState,
-    onBack: () -> Unit,
+    onBack: (() -> Unit)?,
     onTogglePlay: () -> Unit,
     onNext: () -> Unit,
     onPrevious: () -> Unit,
@@ -132,6 +135,7 @@ fun NowPlayingScreen(
     onOpenTimer: () -> Unit
 ) {
     val colors = RelaxMusicColors
+    val hasCurrentSong = trackState.currentSong != null
     var centerContentMode by remember(artworkState.currentSong?.id) { mutableStateOf(CenterContentMode.ARTWORK) }
     val resolvedCenterContentMode = centerContentMode.normalize(hasLyrics = lyricsState.lyrics.isNotEmpty())
 
@@ -151,28 +155,31 @@ fun NowPlayingScreen(
                         .fillMaxWidth()
                         .statusBarsPadding()
                         .padding(horizontal = 20.dp, vertical = 20.dp),
-                    onBack = onBack,
-                    onOpenTimer = onOpenTimer
+                    title = if (hasCurrentSong) "正在播放" else "播放",
+                    onBack = onBack
                 )
             },
             bottomBar = {
-                BottomPlaybackDock(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .navigationBarsPadding()
-                        .padding(horizontal = 20.dp, vertical = 20.dp),
-                    currentSong = trackState.currentSong,
-                    isPlaying = trackState.isPlaying,
-                    progress = progressState.progress,
-                    progressMs = progressState.progressMs,
-                    durationMs = progressState.durationMs,
-                    playMode = controlsState.playMode,
-                    onChangeProgress = onChangeProgress,
-                    onCyclePlayMode = onCyclePlayMode,
-                    onPrevious = onPrevious,
-                    onTogglePlay = onTogglePlay,
-                    onNext = onNext
-                )
+                if (hasCurrentSong) {
+                    BottomPlaybackDock(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .navigationBarsPadding()
+                            .padding(horizontal = 20.dp, vertical = 12.dp),
+                        currentSong = trackState.currentSong,
+                        isPlaying = trackState.isPlaying,
+                        progress = progressState.progress,
+                        progressMs = progressState.progressMs,
+                        durationMs = progressState.durationMs,
+                        playMode = controlsState.playMode,
+                        onChangeProgress = onChangeProgress,
+                        onCyclePlayMode = onCyclePlayMode,
+                        onPrevious = onPrevious,
+                        onTogglePlay = onTogglePlay,
+                        onNext = onNext,
+                        onOpenTimer = onOpenTimer
+                    )
+                }
             }
         ) { innerPadding ->
             Box(
@@ -180,32 +187,36 @@ fun NowPlayingScreen(
                     .fillMaxSize()
                     .padding(innerPadding)
                     .padding(horizontal = 20.dp)
-                    .padding(bottom = 8.dp)
+                    .padding(bottom = 2.dp)
             ) {
-                when (resolvedCenterContentMode) {
-                    CenterContentMode.ARTWORK -> ArtworkCenterCard(
-                        currentSong = artworkState.currentSong,
-                        isPlaying = artworkState.isPlaying,
-                        colors = colors,
-                        onToggleContent = {
-                            centerContentMode = resolvedCenterContentMode.nextOnTap(hasLyrics = lyricsState.lyrics.isNotEmpty())
-                        }
-                    )
-                    CenterContentMode.LYRICS -> LyricsCenterCard(
-                        lyrics = lyricsState.lyrics,
-                        currentLyricIndex = lyricsState.currentLyricIndex,
-                        colors = colors,
-                        onToggleContent = {
-                            centerContentMode = resolvedCenterContentMode.nextOnTap(hasLyrics = lyricsState.lyrics.isNotEmpty())
-                        }
-                    )
-                    CenterContentMode.NO_LYRICS -> NoLyricsCenterCard(
-                        currentSong = artworkState.currentSong,
-                        colors = colors,
-                        onToggleContent = {
-                            centerContentMode = resolvedCenterContentMode.nextOnTap(hasLyrics = lyricsState.lyrics.isNotEmpty())
-                        }
-                    )
+                if (hasCurrentSong) {
+                    when (resolvedCenterContentMode) {
+                        CenterContentMode.ARTWORK -> ArtworkCenterCard(
+                            currentSong = artworkState.currentSong,
+                            isPlaying = artworkState.isPlaying,
+                            colors = colors,
+                            onToggleContent = {
+                                centerContentMode = resolvedCenterContentMode.nextOnTap(hasLyrics = lyricsState.lyrics.isNotEmpty())
+                            }
+                        )
+                        CenterContentMode.LYRICS -> LyricsCenterCard(
+                            lyrics = lyricsState.lyrics,
+                            currentLyricIndex = lyricsState.currentLyricIndex,
+                            colors = colors,
+                            onToggleContent = {
+                                centerContentMode = resolvedCenterContentMode.nextOnTap(hasLyrics = lyricsState.lyrics.isNotEmpty())
+                            }
+                        )
+                        CenterContentMode.NO_LYRICS -> NoLyricsCenterCard(
+                            currentSong = artworkState.currentSong,
+                            colors = colors,
+                            onToggleContent = {
+                                centerContentMode = resolvedCenterContentMode.nextOnTap(hasLyrics = lyricsState.lyrics.isNotEmpty())
+                            }
+                        )
+                    }
+                } else {
+                    PlayerEmptyState(colors = colors)
                 }
             }
         }
@@ -215,20 +226,54 @@ fun NowPlayingScreen(
 @Composable
 private fun NowPlayingHeader(
     modifier: Modifier = Modifier,
-    onBack: () -> Unit,
-    onOpenTimer: () -> Unit
+    title: String,
+    onBack: (() -> Unit)?
 ) {
     Row(
         modifier = modifier,
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(onClick = onBack) {
-            Icon(Icons.Rounded.ArrowBack, contentDescription = "back")
+        if (onBack != null) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "back")
+            }
+        } else {
+            Box(modifier = Modifier.size(48.dp))
         }
-        Text("正在播放", style = MaterialTheme.typography.titleLarge)
-        IconButton(onClick = onOpenTimer) {
-            Icon(Icons.Rounded.Bedtime, contentDescription = "timer")
+        Text(title, style = MaterialTheme.typography.titleLarge)
+        Box(modifier = Modifier.size(48.dp))
+    }
+}
+
+@Composable
+private fun PlayerEmptyState(
+    colors: com.relaxmusic.app.ui.theme.RelaxMusicColorPalette
+) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.MusicNote,
+                contentDescription = "还没有开始播放",
+                tint = colors.accent,
+                modifier = Modifier.size(72.dp)
+            )
+            Text(
+                text = "还没有开始播放",
+                style = MaterialTheme.typography.headlineSmall
+            )
+            Text(
+                text = "从首页或列表选择一首歌开始",
+                style = MaterialTheme.typography.bodyLarge,
+                color = colors.textSecondary,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }
@@ -246,11 +291,12 @@ private fun BottomPlaybackDock(
     onCyclePlayMode: () -> Unit,
     onPrevious: () -> Unit,
     onTogglePlay: () -> Unit,
-    onNext: () -> Unit
+    onNext: () -> Unit,
+    onOpenTimer: () -> Unit
 ) {
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         TrackMetaSection(
             currentSong = currentSong,
@@ -270,7 +316,8 @@ private fun BottomPlaybackDock(
             onCyclePlayMode = onCyclePlayMode,
             onPrevious = onPrevious,
             onTogglePlay = onTogglePlay,
-            onNext = onNext
+            onNext = onNext,
+            onOpenTimer = onOpenTimer
         )
     }
 }
@@ -487,7 +534,7 @@ private fun TrackMetaSection(
     isPlaying: Boolean
 ) {
     val colors = RelaxMusicColors
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
             text = currentSong?.title ?: "还没有开始播放",
             style = MaterialTheme.typography.titleLarge,
@@ -518,18 +565,41 @@ private fun ProgressSection(
     var pendingProgress by remember { mutableStateOf<Float?>(null) }
     val sliderValue = pendingProgress ?: progress
 
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Slider(
-            value = sliderValue,
-            onValueChange = { pendingProgress = it },
-            onValueChangeFinished = {
-                pendingProgress?.let(onChangeProgress)
-                pendingProgress = null
-            }
-        )
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(TimeFormatter.formatSongDuration(progressMs))
-            Text(TimeFormatter.formatSongDuration(durationMs))
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val timeWidth = 42.dp
+        val gap = 8.dp
+        val sliderWidth = (maxWidth - timeWidth - timeWidth - gap - gap).coerceAtLeast(0.dp)
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(gap),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = TimeFormatter.formatSongDuration(progressMs),
+                color = RelaxMusicColors.textSecondary,
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.End,
+                modifier = Modifier.width(timeWidth)
+            )
+            Slider(
+                value = sliderValue,
+                onValueChange = { pendingProgress = it },
+                onValueChangeFinished = {
+                    pendingProgress?.let(onChangeProgress)
+                    pendingProgress = null
+                },
+                modifier = Modifier
+                    .width(sliderWidth)
+                    .graphicsLayer(scaleY = 0.62f)
+            )
+            Text(
+                text = TimeFormatter.formatSongDuration(durationMs),
+                color = RelaxMusicColors.textSecondary,
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Start,
+                modifier = Modifier.width(timeWidth)
+            )
         }
     }
 }
@@ -541,9 +611,10 @@ private fun PlaybackControlsSection(
     onCyclePlayMode: () -> Unit,
     onPrevious: () -> Unit,
     onTogglePlay: () -> Unit,
-    onNext: () -> Unit
+    onNext: () -> Unit,
+    onOpenTimer: () -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly,
@@ -567,6 +638,9 @@ private fun PlaybackControlsSection(
             }
             IconButton(onClick = onNext) {
                 Icon(Icons.Rounded.FastForward, contentDescription = "next")
+            }
+            IconButton(onClick = onOpenTimer) {
+                Icon(Icons.Rounded.AccessTime, contentDescription = "timer")
             }
         }
     }
