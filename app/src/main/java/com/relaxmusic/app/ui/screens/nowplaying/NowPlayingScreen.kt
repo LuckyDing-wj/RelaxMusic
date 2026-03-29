@@ -11,7 +11,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
@@ -19,11 +18,10 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -38,15 +36,17 @@ import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.FastForward
 import androidx.compose.material.icons.rounded.FastRewind
 import androidx.compose.material.icons.rounded.Fullscreen
-import androidx.compose.material.icons.rounded.Loop
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.PauseCircle
 import androidx.compose.material.icons.rounded.PlayCircle
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material.icons.rounded.Reorder
+import androidx.compose.material.icons.rounded.Repeat
+import androidx.compose.material.icons.rounded.RepeatOne
+import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -62,6 +62,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -112,6 +113,15 @@ private fun playModeLabel(raw: String): String {
     }
 }
 
+private fun playModeIcon(playMode: PlayMode): ImageVector {
+    return when (playMode) {
+        PlayMode.SEQUENCE -> Icons.Rounded.Reorder
+        PlayMode.REPEAT_ONE -> Icons.Rounded.RepeatOne
+        PlayMode.REPEAT_ALL -> Icons.Rounded.Repeat
+        PlayMode.SHUFFLE -> Icons.Rounded.Shuffle
+    }
+}
+
 @Composable
 fun NowPlayingScreen(
     artworkState: NowPlayingArtworkUiState,
@@ -139,65 +149,75 @@ fun NowPlayingScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Main content
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
-            NowPlayingHeader(onBack = onBack, onOpenTimer = onOpenTimer)
-
-            when (resolvedCenterContentMode) {
-                CenterContentMode.ARTWORK -> ArtworkCenterCard(
-                    currentSong = artworkState.currentSong,
-                    isPlaying = artworkState.isPlaying,
-                    colors = colors,
-                    onToggleContent = {
-                        centerContentMode = resolvedCenterContentMode.nextOnTap(hasLyrics = lyricsState.lyrics.isNotEmpty())
-                    }
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = Color.Transparent,
+            topBar = {
+                NowPlayingHeader(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(horizontal = 20.dp, vertical = 20.dp),
+                    onBack = onBack,
+                    onOpenTimer = onOpenTimer
                 )
-                CenterContentMode.LYRICS -> LyricsCenterCard(
-                    lyrics = lyricsState.lyrics,
-                    currentLyricIndex = lyricsState.currentLyricIndex,
-                    colors = colors,
-                    onToggleContent = {
-                        centerContentMode = resolvedCenterContentMode.nextOnTap(hasLyrics = lyricsState.lyrics.isNotEmpty())
-                    },
-                    onEnterFullscreen = { isFullscreenLyrics = true }
-                )
-                CenterContentMode.NO_LYRICS -> NoLyricsCenterCard(
-                    currentSong = artworkState.currentSong,
-                    colors = colors,
-                    onToggleContent = {
-                        centerContentMode = resolvedCenterContentMode.nextOnTap(hasLyrics = lyricsState.lyrics.isNotEmpty())
-                    }
+            },
+            bottomBar = {
+                BottomPlaybackDock(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 20.dp, vertical = 20.dp),
+                    currentSong = trackState.currentSong,
+                    isPlaying = trackState.isPlaying,
+                    progress = progressState.progress,
+                    progressMs = progressState.progressMs,
+                    durationMs = progressState.durationMs,
+                    playMode = controlsState.playMode,
+                    onChangeProgress = onChangeProgress,
+                    onCyclePlayMode = onCyclePlayMode,
+                    onPrevious = onPrevious,
+                    onTogglePlay = onTogglePlay,
+                    onNext = onNext
                 )
             }
-
-            TrackMetaSection(
-                currentSong = trackState.currentSong,
-                isPlaying = trackState.isPlaying
-            )
-
-            ProgressSection(
-                progress = progressState.progress,
-                progressMs = progressState.progressMs,
-                durationMs = progressState.durationMs,
-                onChangeProgress = onChangeProgress
-            )
-
-            PlaybackControlsSection(
-                playMode = controlsState.playMode,
-                isPlaying = controlsState.isPlaying,
-                onCyclePlayMode = onCyclePlayMode,
-                onPrevious = onPrevious,
-                onTogglePlay = onTogglePlay,
-                onNext = onNext
-            )
+        ) { innerPadding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 8.dp)
+            ) {
+                when (resolvedCenterContentMode) {
+                    CenterContentMode.ARTWORK -> ArtworkCenterCard(
+                        currentSong = artworkState.currentSong,
+                        isPlaying = artworkState.isPlaying,
+                        colors = colors,
+                        onToggleContent = {
+                            centerContentMode = resolvedCenterContentMode.nextOnTap(hasLyrics = lyricsState.lyrics.isNotEmpty())
+                        }
+                    )
+                    CenterContentMode.LYRICS -> LyricsCenterCard(
+                        lyrics = lyricsState.lyrics,
+                        currentLyricIndex = lyricsState.currentLyricIndex,
+                        colors = colors,
+                        onToggleContent = {
+                            centerContentMode = resolvedCenterContentMode.nextOnTap(hasLyrics = lyricsState.lyrics.isNotEmpty())
+                        },
+                        onEnterFullscreen = { isFullscreenLyrics = true }
+                    )
+                    CenterContentMode.NO_LYRICS -> NoLyricsCenterCard(
+                        currentSong = artworkState.currentSong,
+                        colors = colors,
+                        onToggleContent = {
+                            centerContentMode = resolvedCenterContentMode.nextOnTap(hasLyrics = lyricsState.lyrics.isNotEmpty())
+                        }
+                    )
+                }
+            }
         }
 
-        // Fullscreen lyrics overlay
         AnimatedVisibility(
             visible = isFullscreenLyrics,
             enter = fadeIn(animationSpec = tween(300)),
@@ -225,11 +245,12 @@ fun NowPlayingScreen(
 
 @Composable
 private fun NowPlayingHeader(
+    modifier: Modifier = Modifier,
     onBack: () -> Unit,
     onOpenTimer: () -> Unit
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier,
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -244,17 +265,58 @@ private fun NowPlayingHeader(
 }
 
 @Composable
+private fun BottomPlaybackDock(
+    modifier: Modifier = Modifier,
+    currentSong: Song?,
+    isPlaying: Boolean,
+    progress: Float,
+    progressMs: Long,
+    durationMs: Long,
+    playMode: PlayMode,
+    onChangeProgress: (Float) -> Unit,
+    onCyclePlayMode: () -> Unit,
+    onPrevious: () -> Unit,
+    onTogglePlay: () -> Unit,
+    onNext: () -> Unit
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        TrackMetaSection(
+            currentSong = currentSong,
+            isPlaying = isPlaying
+        )
+
+        ProgressSection(
+            progress = progress,
+            progressMs = progressMs,
+            durationMs = durationMs,
+            onChangeProgress = onChangeProgress
+        )
+
+        PlaybackControlsSection(
+            playMode = playMode,
+            isPlaying = isPlaying,
+            onCyclePlayMode = onCyclePlayMode,
+            onPrevious = onPrevious,
+            onTogglePlay = onTogglePlay,
+            onNext = onNext
+        )
+    }
+}
+
+@Composable
 private fun ArtworkCenterCard(
     currentSong: Song?,
     isPlaying: Boolean,
     colors: com.relaxmusic.app.ui.theme.RelaxMusicColorPalette,
     onToggleContent: () -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onToggleContent),
-        shape = RoundedCornerShape(28.dp),
-        border = BorderStroke(1.dp, colors.panelBorder),
-        colors = CardDefaults.cardColors(containerColor = colors.panelSurface)
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clickable(onClick = onToggleContent)
     ) {
         ArtworkContent(currentSong = currentSong, isPlaying = isPlaying, colors = colors)
     }
@@ -268,15 +330,13 @@ private fun LyricsCenterCard(
     onToggleContent: () -> Unit,
     onEnterFullscreen: () -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onToggleContent),
-        shape = RoundedCornerShape(28.dp),
-        border = BorderStroke(1.dp, colors.panelBorder),
-        colors = CardDefaults.cardColors(containerColor = colors.panelSurface)
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clickable(onClick = onToggleContent)
     ) {
-        Box(modifier = Modifier.fillMaxWidth().height(320.dp)) {
+        Box(modifier = Modifier.fillMaxSize()) {
             LyricsContent(lyrics = lyrics, currentLyricIndex = currentLyricIndex, colors = colors)
-            // Fullscreen button
             IconButton(
                 onClick = onEnterFullscreen,
                 modifier = Modifier
@@ -299,11 +359,10 @@ private fun NoLyricsCenterCard(
     colors: com.relaxmusic.app.ui.theme.RelaxMusicColorPalette,
     onToggleContent: () -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onToggleContent),
-        shape = RoundedCornerShape(28.dp),
-        border = BorderStroke(1.dp, colors.panelBorder),
-        colors = CardDefaults.cardColors(containerColor = colors.panelSurface)
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clickable(onClick = onToggleContent)
     ) {
         NoLyricsContent(currentSong = currentSong, colors = colors)
     }
@@ -340,23 +399,22 @@ private fun ArtworkContent(
 
     Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .height(320.dp)
-            .padding(18.dp)
-            .scale(albumArtScale)
-            .clip(RoundedCornerShape(24.dp))
-            .background(colors.accent.copy(alpha = 0.16f)),
+            .fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
         if (albumArtBitmap != null) {
             Image(
                 bitmap = albumArtBitmap!!.asImageBitmap(),
                 contentDescription = currentSong?.title ?: "当前歌曲封面",
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxWidth(0.9f)
+                    .aspectRatio(1f)
+                    .scale(albumArtScale),
                 contentScale = ContentScale.Crop
             )
         } else {
             Column(
+                modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
@@ -399,9 +457,8 @@ private fun LyricsContent(
 
     LazyColumn(
         modifier = Modifier
-            .fillMaxWidth()
-            .height(320.dp)
-            .padding(horizontal = 20.dp, vertical = 18.dp),
+            .fillMaxSize()
+            .padding(horizontal = 4.dp, vertical = 8.dp),
         state = lyricListState,
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
@@ -424,11 +481,7 @@ private fun NoLyricsContent(
 ) {
     Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .height(320.dp)
-            .padding(18.dp)
-            .clip(RoundedCornerShape(24.dp))
-            .background(colors.accent.copy(alpha = 0.08f)),
+            .fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -508,9 +561,16 @@ private fun PlaybackControlsSection(
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceAround,
+            horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            IconButton(onClick = onCyclePlayMode) {
+                Icon(
+                    imageVector = playModeIcon(playMode),
+                    contentDescription = playModeLabel(playMode.name),
+                    tint = RelaxMusicColors.accent
+                )
+            }
             IconButton(onClick = onPrevious) {
                 Icon(Icons.Rounded.FastRewind, contentDescription = "previous")
             }
@@ -523,45 +583,6 @@ private fun PlaybackControlsSection(
             IconButton(onClick = onNext) {
                 Icon(Icons.Rounded.FastForward, contentDescription = "next")
             }
-        }
-
-        UtilityActionCard(
-            title = playModeLabel(playMode.name),
-            icon = { Icon(Icons.Rounded.Loop, contentDescription = "play mode") },
-            onClick = onCyclePlayMode,
-            modifier = Modifier.fillMaxWidth()
-        )
-    }
-}
-
-@Composable
-private fun UtilityActionCard(
-    title: String,
-    icon: @Composable () -> Unit,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val colors = RelaxMusicColors
-    Card(
-        modifier = modifier.clickable(onClick = onClick),
-        shape = RoundedCornerShape(18.dp),
-        border = BorderStroke(1.dp, colors.panelBorder),
-        colors = CardDefaults.cardColors(containerColor = colors.panelSurface)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            icon()
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
         }
     }
 }
