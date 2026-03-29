@@ -1,5 +1,4 @@
 package com.relaxmusic.app.ui.navigation
-
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -24,12 +23,9 @@ import com.relaxmusic.app.ui.screens.library.LibraryViewModel
 import com.relaxmusic.app.ui.screens.library.PlaylistDetailScreen
 import com.relaxmusic.app.ui.screens.library.PlaylistsScreen
 import com.relaxmusic.app.ui.screens.nowplaying.PlayerViewModel
-import com.relaxmusic.app.ui.screens.nowplaying.NowPlayingScreen
-import com.relaxmusic.app.ui.screens.nowplaying.QueueScreen
 import com.relaxmusic.app.ui.screens.settings.SettingsScreen
 import com.relaxmusic.app.ui.screens.settings.SettingsUiState
 import com.relaxmusic.app.ui.screens.settings.SettingsViewModel
-
 @Composable
 fun RelaxMusicNavGraph(
     navController: NavHostController,
@@ -40,20 +36,16 @@ fun RelaxMusicNavGraph(
     settingsViewModel: SettingsViewModel,
     onPickFolder: () -> Unit,
     onOpenTimer: () -> Unit,
+    onOpenNowPlaying: () -> Unit,
+    onOpenQueue: () -> Unit,
     onExportBackup: () -> Unit,
     onImportBackup: () -> Unit
 ) {
-    fun navigateToNowPlaying() {
-        navController.navigate(RelaxMusicDestination.NowPlaying.route) {
-            launchSingleTop = true
-        }
-    }
-
     fun playSong(song: Song, queue: List<Song>) {
         playerViewModel.playSong(song, queue)
         libraryViewModel.setCurrentSong(song.id)
         libraryViewModel.markSongPlayed(song.id)
-        navigateToNowPlaying()
+        onOpenNowPlaying()
     }
 
     fun navigateToTopLevel(destination: TopLevelDestination) {
@@ -97,13 +89,9 @@ fun RelaxMusicNavGraph(
                 onOpenPlaylists = { navController.navigate(RelaxMusicDestination.Playlists.route) },
                 onOpenLibrary = { navigateToTopLevel(TopLevelDestination.LIBRARY) },
                 onOpenRecent = { navController.navigate(RelaxMusicDestination.History.route) },
-                onOpenQueue = {
-                    navController.navigate(RelaxMusicDestination.Queue.route) {
-                        launchSingleTop = true
-                    }
-                },
+                onOpenQueue = onOpenQueue,
                 onOpenTimer = onOpenTimer,
-                onOpenNowPlaying = ::navigateToNowPlaying,
+                onOpenNowPlaying = onOpenNowPlaying,
                 onOpenSettings = { navigateToTopLevel(TopLevelDestination.SETTINGS) },
                 onOpenFavorites = { navController.navigate(RelaxMusicDestination.Favorites.route) }
             )
@@ -291,42 +279,6 @@ fun RelaxMusicNavGraph(
                 showBackButton = true,
                 emptyMessageAction = { navigateToTopLevel(TopLevelDestination.LISTS) },
                 supportingText = "按播放时间倒序展示，每次播放都会保留一条记录。"
-            )
-        }
-
-        composable(RelaxMusicDestination.NowPlaying.route) {
-            NowPlayingScreen(
-                artworkState = playerViewModel.nowPlayingArtworkUiState,
-                lyricsState = playerViewModel.nowPlayingLyricsUiState,
-                trackState = playerViewModel.nowPlayingTrackUiState,
-                progressState = playerViewModel.nowPlayingProgressUiState,
-                controlsState = playerViewModel.nowPlayingControlsUiState,
-                onBack = { navController.navigateUp() },
-                onTogglePlay = playerViewModel::togglePlay,
-                onNext = playerViewModel::next,
-                onPrevious = playerViewModel::previous,
-                onChangeProgress = playerViewModel::seekTo,
-                onCyclePlayMode = playerViewModel::cyclePlayMode,
-                onOpenTimer = onOpenTimer,
-                onOpenQueue = {
-                    navController.navigate(RelaxMusicDestination.Queue.route) {
-                        launchSingleTop = true
-                    }
-                }
-            )
-        }
-
-        composable(RelaxMusicDestination.Queue.route) {
-            QueueScreen(
-                queue = playerViewModel.uiState.queue,
-                currentIndex = playerViewModel.uiState.currentIndex,
-                onBack = { navController.navigateUp() },
-                onSongClick = { song ->
-                    playerViewModel.playQueueSong(song.id)
-                    libraryViewModel.setCurrentSong(song.id)
-                    navController.navigateUp()
-                },
-                onRemove = playerViewModel::removeFromQueue
             )
         }
 

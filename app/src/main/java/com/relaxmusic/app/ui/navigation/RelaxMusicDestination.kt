@@ -13,8 +13,6 @@ sealed class RelaxMusicDestination(val route: String) {
     object Playlists : RelaxMusicDestination("playlists")
     object Favorites : RelaxMusicDestination("favorites")
     object History : RelaxMusicDestination("history")
-    object NowPlaying : RelaxMusicDestination("now-playing")
-    object Queue : RelaxMusicDestination("queue")
     object Settings : RelaxMusicDestination("settings")
 
     object AlbumDetail : RelaxMusicDestination("album/{albumName}/{albumArtist}") {
