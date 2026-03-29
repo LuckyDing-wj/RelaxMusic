@@ -93,6 +93,7 @@ class LibraryViewModel(
             libraryDirectories = transient.directories,
             libraryDirectoryLabels = transient.directories.associateWith(::formatFolderLabel),
             scanningDirectoryLabel = transient.scanningDirectoryLabel,
+            allSongs = songs,
             songs = filteredSongs,
             favoriteSongs = favorites,
             recentSongs = recentSongs.filter { it.lastPlayedAt != null },

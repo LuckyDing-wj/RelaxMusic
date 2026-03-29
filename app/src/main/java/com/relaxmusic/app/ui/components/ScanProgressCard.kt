@@ -13,7 +13,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.relaxmusic.app.ui.theme.RelaxMusicColors
 
 @Composable
@@ -28,39 +30,47 @@ fun ScanProgressCard(
     val colors = RelaxMusicColors
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = colors.panelSurface),
         border = BorderStroke(1.dp, colors.panelBorder)
     ) {
         Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Text(
-                text = if (scanning) "正在扫描音乐目录" else "本地曲库概览",
-                style = MaterialTheme.typography.titleLarge
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = if (scanning) "正在扫描..." else "本地曲库",
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                    color = colors.accent
+                )
+                Text(
+                    text = "共 $songCount 首",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = colors.textSecondary
+                )
+            }
             Text(
                 text = currentFolderLabel,
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Text(
-                text = statusMessage,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
                 color = colors.textSecondary
             )
+            if (statusMessage.isNotBlank()) {
+                Text(
+                    text = statusMessage,
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                    color = colors.textSecondary
+                )
+            }
             if (errorMessage != null) {
                 Text(
                     text = errorMessage,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                     color = MaterialTheme.colorScheme.error
-                )
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                Text("歌曲数: $songCount", style = MaterialTheme.typography.bodyMedium)
-                Text(
-                    text = if (scanning) "状态: 扫描中" else "状态: 就绪",
-                    style = MaterialTheme.typography.bodyMedium
                 )
             }
         }

@@ -6,15 +6,23 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Album
 import androidx.compose.material.icons.rounded.Bedtime
+import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.History
+import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.MusicNote
-import androidx.compose.material.icons.rounded.QueueMusic
+import androidx.compose.material.icons.rounded.PauseCircle
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Button
@@ -25,11 +33,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.relaxmusic.app.domain.model.Song
 import com.relaxmusic.app.ui.components.EmptyLibraryView
 import com.relaxmusic.app.ui.components.ScanProgressCard
@@ -44,12 +56,18 @@ fun LibraryScreen(
     onPickFolder: () -> Unit,
     onRemoveFolder: (String) -> Unit,
     onRescan: () -> Unit,
+    onOpenFullLibrary: () -> Unit,
     onOpenLibrary: () -> Unit,
     onOpenRecent: () -> Unit,
+
     onOpenQueue: () -> Unit,
     onOpenTimer: () -> Unit,
     onOpenNowPlaying: () -> Unit,
-    onOpenSettings: () -> Unit
+    onOpenSettings: () -> Unit,
+    onOpenFavorites: () -> Unit,
+    onOpenAlbums: () -> Unit,
+    onOpenArtists: () -> Unit,
+    onOpenPlaylists: () -> Unit
 ) {
     val colors = RelaxMusicColors
     val dashboardModel = buildHomeDashboardModel(
@@ -61,27 +79,44 @@ fun LibraryScreen(
 
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 18.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("RelaxMusic", style = MaterialTheme.typography.headlineMedium)
-                    Text("纯本地音乐播放器 V1", color = colors.textSecondary)
-                }
-                IconButton(onClick = onOpenSettings) {
-                    Icon(Icons.Rounded.Settings, contentDescription = "settings")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "RelaxMusic",
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 22.sp
+                    )
+                )
+                IconButton(onClick = onOpenSettings, modifier = Modifier.size(40.dp)) {
+                    Icon(Icons.Rounded.Settings, contentDescription = "settings", modifier = Modifier.size(24.dp))
                 }
             }
         }
 
         item {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(onClick = onPickFolder) { Text("选择目录") }
-                OutlinedButton(onClick = onRescan) {
-                    Icon(Icons.Rounded.Refresh, contentDescription = null)
-                    Text("重新扫描", modifier = Modifier.padding(start = 6.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = onPickFolder,
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    Text("添加目录", fontSize = 13.sp)
+                }
+                OutlinedButton(
+                    onClick = onRescan,
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Text("同步曲库", modifier = Modifier.padding(start = 4.dp), fontSize = 13.sp)
                 }
             }
         }
@@ -96,37 +131,47 @@ fun LibraryScreen(
             )
         }
 
-        if (state.libraryDirectories.isNotEmpty()) {
-            item {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    state.libraryDirectories.forEach { directoryUri ->
-                        Surface(
-                            shape = RoundedCornerShape(16.dp),
-                            color = colors.panelSurface,
-                            border = BorderStroke(1.dp, colors.panelBorder)
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 14.dp, vertical = 10.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    text = state.libraryDirectoryLabels[directoryUri] ?: directoryUri,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f),
-                                    color = colors.textSecondary
-                                )
-                                TextButton(onClick = { onRemoveFolder(directoryUri) }) {
-                                    Text("移除")
-                                }
-                            }
-                        }
-                    }
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    GridHubItem(
+                        title = "全部歌曲",
+                        icon = Icons.Rounded.MusicNote,
+                        onClick = onOpenFullLibrary,
+                        modifier = Modifier.weight(1f)
+                    )
+                    GridHubItem(
+                        title = "我的收藏",
+                        icon = Icons.Rounded.Favorite,
+                        onClick = onOpenFavorites,
+                        modifier = Modifier.weight(1f)
+                    )
+                    GridHubItem(
+                        title = "我的歌单",
+                        icon = Icons.Rounded.LibraryMusic,
+                        onClick = onOpenPlaylists,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    GridHubItem(
+                        title = "播放历史",
+                        icon = Icons.Rounded.History,
+                        onClick = onOpenRecent,
+                        modifier = Modifier.weight(1f)
+                    )
+                    GridHubItem(
+                        title = "专辑分类",
+                        icon = Icons.Rounded.Album,
+                        onClick = onOpenAlbums,
+                        modifier = Modifier.weight(1f)
+                    )
+                    GridHubItem(
+                        title = "艺术家",
+                        icon = Icons.Rounded.Person,
+                        onClick = onOpenArtists,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
         }
@@ -143,43 +188,19 @@ fun LibraryScreen(
             )
         }
 
-        item {
-            QuickInfoCard(
-                title = dashboardModel.libraryEntryTitle,
-                subtitle = dashboardModel.libraryEntrySubtitle,
-                icon = { Icon(Icons.Rounded.MusicNote, contentDescription = "library", tint = colors.accent) },
-                onClick = onOpenLibrary,
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                QuickInfoCard(
-                    title = "播放队列",
-                    subtitle = "查看当前待播列表",
-                    icon = { Icon(Icons.Rounded.QueueMusic, contentDescription = "queue", tint = colors.accent) },
-                    onClick = onOpenQueue,
-                    modifier = Modifier.weight(1f)
-                )
-                QuickInfoCard(
-                    title = "睡眠定时",
-                    subtitle = "设置自动停止播放",
-                    icon = { Icon(Icons.Rounded.Bedtime, contentDescription = "sleep timer", tint = colors.accent) },
-                    onClick = onOpenTimer,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
-
         if (dashboardModel.showRecentSection) {
             item {
-                QuickInfoCard(
-                    title = "最近播放",
-                    subtitle = dashboardModel.recentSubtitle,
-                    icon = { Icon(Icons.Rounded.History, contentDescription = "recent", tint = colors.accent) },
-                    onClick = onOpenRecent,
-                    modifier = Modifier.fillMaxWidth()
+                Text(
+                    text = "最近播放",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = colors.textSecondary,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+                Text(
+                    text = dashboardModel.recentSubtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
@@ -188,6 +209,44 @@ fun LibraryScreen(
             item {
                 EmptyLibraryView(onPickFolder = onPickFolder, modifier = Modifier.fillMaxWidth())
             }
+        }
+    }
+}
+
+@Composable
+private fun GridHubItem(
+    title: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colors = RelaxMusicColors
+    Surface(
+        modifier = modifier.height(84.dp).clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        color = colors.panelSurface,
+        border = BorderStroke(1.dp, colors.panelBorder)
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(8.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = title,
+                tint = colors.accent,
+                modifier = Modifier.size(28.dp)
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 12.sp
+                ),
+                textAlign = TextAlign.Center
+            )
         }
     }
 }
@@ -205,76 +264,43 @@ private fun ContinuePlaybackCard(
     val colors = RelaxMusicColors
     Surface(
         modifier = modifier.then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(16.dp),
         color = colors.panelSurfaceStrong,
-        tonalElevation = 0.dp,
-        border = BorderStroke(1.dp, colors.panelBorder)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = if (enabled && isPlaying) "正在播放" else "继续播放",
-                style = MaterialTheme.typography.labelLarge,
-                color = colors.accent
-            )
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodyMedium,
-                color = colors.textSecondary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            LinearProgressIndicator(
-                progress = { progress.coerceIn(0f, 1f) },
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-    }
-}
-
-@Composable
-private fun QuickInfoCard(
-    title: String,
-    subtitle: String,
-    icon: @Composable () -> Unit,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val colors = RelaxMusicColors
-    Surface(
-        modifier = modifier.clickable(onClick = onClick),
-        shape = RoundedCornerShape(18.dp),
-        color = colors.panelSurface,
-        tonalElevation = 0.dp,
         border = BorderStroke(1.dp, colors.panelBorder)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            icon()
             Column(modifier = Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleMedium, color = colors.accent)
                 Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = colors.textSecondary,
+                    text = if (enabled && isPlaying) "正在播放" else "继续播放",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = colors.accent
+                )
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                Spacer(modifier = Modifier.height(4.dp))
+                LinearProgressIndicator(
+                    progress = { progress.coerceIn(0f, 1f) },
+                    modifier = Modifier.fillMaxWidth().height(4.dp),
+                    trackColor = colors.panelBorder,
+                    color = colors.accent
+                )
             }
+            Icon(
+                imageVector = if (isPlaying) Icons.Rounded.PauseCircle else Icons.Rounded.PlayCircle,
+                contentDescription = null,
+                tint = colors.accent,
+                modifier = Modifier.size(32.dp)
+            )
         }
     }
 }

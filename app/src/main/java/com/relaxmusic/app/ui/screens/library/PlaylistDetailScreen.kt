@@ -6,7 +6,9 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -26,8 +28,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.relaxmusic.app.domain.model.Playlist
 import com.relaxmusic.app.domain.model.Song
 import com.relaxmusic.app.ui.theme.RelaxMusicColors
@@ -51,40 +56,55 @@ fun PlaylistDetailScreen(
     var renaming by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf(false) }
 
-    Column(
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 20.dp, vertical = 18.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(bottom = 100.dp)
     ) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.Rounded.ArrowBack, contentDescription = "back")
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                IconButton(onClick = { renaming = true }) {
-                    Icon(Icons.Rounded.Edit, contentDescription = "rename")
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.Rounded.ArrowBack, contentDescription = "back")
                 }
-                IconButton(onClick = { deleting = true }) {
-                    Icon(Icons.Rounded.Delete, contentDescription = "delete")
-                }
-                Button(onClick = { adding = true }) {
-                    Icon(Icons.Rounded.PlaylistAdd, contentDescription = "add")
-                    Text("添加歌曲", modifier = Modifier.padding(start = 6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    IconButton(onClick = { renaming = true }) {
+                        Icon(Icons.Rounded.Edit, contentDescription = "rename")
+                    }
+                    IconButton(onClick = { deleting = true }) {
+                        Icon(Icons.Rounded.Delete, contentDescription = "delete")
+                    }
+                    Button(
+                        onClick = { adding = true },
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                        modifier = Modifier.height(36.dp)
+                    ) {
+                        Icon(Icons.Rounded.PlaylistAdd, contentDescription = "add", modifier = Modifier.size(18.dp))
+                        Text("加歌", modifier = Modifier.padding(start = 4.dp), fontSize = 13.sp)
+                    }
                 }
             }
         }
 
-        Text(playlist?.name ?: "歌单", style = MaterialTheme.typography.headlineMedium)
-        Text("${playlistSongs.size} 首歌曲", color = colors.textSecondary)
-
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 120.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            items(playlistSongs, key = { it.id }) { song ->
-                val rowModel = SongRowUiModel(
+        item {
+            Text(
+                text = playlist?.name ?: "歌单",
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, fontSize = 20.sp)
+            )
+            Text(
+                text = "${playlistSongs.size} 首歌曲",
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.textSecondary
+            )
+        }
+        items(playlistSongs, key = { it.id }) { song ->
+            val rowModel = remember(song, currentSongId) {
+                SongRowUiModel(
                     id = song.id,
                     title = song.title,
                     subtitle = if (currentSongId == song.id) {
@@ -96,13 +116,18 @@ fun PlaylistDetailScreen(
                     isFavorite = song.isFavorite,
                     isCurrent = currentSongId == song.id
                 )
+            }
+            Column {
                 LibrarySongRow(
                     row = rowModel,
                     onClick = { onSongClick(song) },
                     onToggleFavorite = { onToggleFavorite(song.id) }
                 )
-                TextButton(onClick = { onRemoveSong(song.id) }) {
-                    Text("从歌单移除")
+                TextButton(
+                    onClick = { onRemoveSong(song.id) },
+                    modifier = Modifier.padding(start = 12.dp).height(32.dp)
+                ) {
+                    Text("从歌单移除", fontSize = 11.sp)
                 }
             }
         }
@@ -113,13 +138,13 @@ fun PlaylistDetailScreen(
             onDismissRequest = { adding = false },
             title = { Text("添加到 ${playlist.name}") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    allSongs.filterNot { existing -> playlistSongs.any { it.id == existing.id } }.take(12).forEach { song ->
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    allSongs.filterNot { existing -> playlistSongs.any { it.id == existing.id } }.take(10).forEach { song ->
                         TextButton(onClick = {
                             onAddSong(song.id)
                             adding = false
                         }) {
-                            Text(song.title)
+                            Text(song.title, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                         }
                     }
                 }

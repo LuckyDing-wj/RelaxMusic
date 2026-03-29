@@ -1,22 +1,29 @@
 package com.relaxmusic.app.ui.screens.nowplaying
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -24,8 +31,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Bedtime
+import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.FastForward
 import androidx.compose.material.icons.rounded.FastRewind
+import androidx.compose.material.icons.rounded.Fullscreen
 import androidx.compose.material.icons.rounded.Loop
 import androidx.compose.material.icons.rounded.PauseCircle
 import androidx.compose.material.icons.rounded.PlayCircle
@@ -47,9 +56,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import com.relaxmusic.app.domain.model.LyricLine
 import com.relaxmusic.app.domain.model.PlayMode
 import com.relaxmusic.app.domain.model.Song
@@ -128,6 +142,7 @@ fun NowPlayingScreen(
 ) {
     val colors = RelaxMusicColors
     var centerContentMode by remember(artworkState.currentSong?.id) { mutableStateOf(CenterContentMode.ARTWORK) }
+    var isFullscreenLyrics by remember { mutableStateOf(false) }
     val resolvedCenterContentMode = centerContentMode.normalize(hasLyrics = lyricsState.lyrics.isNotEmpty())
 
     LaunchedEffect(resolvedCenterContentMode) {
@@ -136,62 +151,90 @@ fun NowPlayingScreen(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
-    ) {
-        NowPlayingHeader(onBack = onBack, onOpenTimer = onOpenTimer)
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Main content
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            NowPlayingHeader(onBack = onBack, onOpenTimer = onOpenTimer)
 
-        when (resolvedCenterContentMode) {
-            CenterContentMode.ARTWORK -> ArtworkCenterCard(
-                isPlaying = artworkState.isPlaying,
-                colors = colors,
-                onToggleContent = {
-                    centerContentMode = resolvedCenterContentMode.nextOnTap(hasLyrics = lyricsState.lyrics.isNotEmpty())
-                }
+            when (resolvedCenterContentMode) {
+                CenterContentMode.ARTWORK -> ArtworkCenterCard(
+                    isPlaying = artworkState.isPlaying,
+                    colors = colors,
+                    onToggleContent = {
+                        centerContentMode = resolvedCenterContentMode.nextOnTap(hasLyrics = lyricsState.lyrics.isNotEmpty())
+                    }
+                )
+                CenterContentMode.LYRICS -> LyricsCenterCard(
+                    lyrics = lyricsState.lyrics,
+                    currentLyricIndex = lyricsState.currentLyricIndex,
+                    colors = colors,
+                    onToggleContent = {
+                        centerContentMode = resolvedCenterContentMode.nextOnTap(hasLyrics = lyricsState.lyrics.isNotEmpty())
+                    },
+                    onEnterFullscreen = { isFullscreenLyrics = true }
+                )
+                CenterContentMode.NO_LYRICS -> NoLyricsCenterCard(
+                    currentSong = artworkState.currentSong,
+                    colors = colors,
+                    onToggleContent = {
+                        centerContentMode = resolvedCenterContentMode.nextOnTap(hasLyrics = lyricsState.lyrics.isNotEmpty())
+                    }
+                )
+            }
+
+            TrackMetaSection(
+                currentSong = trackState.currentSong,
+                isPlaying = trackState.isPlaying
             )
-            CenterContentMode.LYRICS -> LyricsCenterCard(
-                lyrics = lyricsState.lyrics,
-                currentLyricIndex = lyricsState.currentLyricIndex,
-                colors = colors,
-                onToggleContent = {
-                    centerContentMode = resolvedCenterContentMode.nextOnTap(hasLyrics = lyricsState.lyrics.isNotEmpty())
-                }
+
+            ProgressSection(
+                progress = progressState.progress,
+                progressMs = progressState.progressMs,
+                durationMs = progressState.durationMs,
+                onChangeProgress = onChangeProgress
             )
-            CenterContentMode.NO_LYRICS -> NoLyricsCenterCard(
-                currentSong = artworkState.currentSong,
-                colors = colors,
-                onToggleContent = {
-                    centerContentMode = resolvedCenterContentMode.nextOnTap(hasLyrics = lyricsState.lyrics.isNotEmpty())
-                }
+
+            PlaybackControlsSection(
+                playMode = controlsState.playMode,
+                isPlaying = controlsState.isPlaying,
+                sleepTimerRemaining = controlsState.sleepTimerRemaining,
+                onCyclePlayMode = onCyclePlayMode,
+                onPrevious = onPrevious,
+                onTogglePlay = onTogglePlay,
+                onNext = onNext,
+                onOpenQueue = onOpenQueue,
+                onOpenTimer = onOpenTimer
             )
         }
 
-        TrackMetaSection(
-            currentSong = trackState.currentSong,
-            isPlaying = trackState.isPlaying
-        )
-
-        ProgressSection(
-            progress = progressState.progress,
-            progressMs = progressState.progressMs,
-            durationMs = progressState.durationMs,
-            onChangeProgress = onChangeProgress
-        )
-
-        PlaybackControlsSection(
-            playMode = controlsState.playMode,
-            isPlaying = controlsState.isPlaying,
-            sleepTimerRemaining = controlsState.sleepTimerRemaining,
-            onCyclePlayMode = onCyclePlayMode,
-            onPrevious = onPrevious,
-            onTogglePlay = onTogglePlay,
-            onNext = onNext,
-            onOpenQueue = onOpenQueue,
-            onOpenTimer = onOpenTimer
-        )
+        // Fullscreen lyrics overlay
+        AnimatedVisibility(
+            visible = isFullscreenLyrics,
+            enter = fadeIn(animationSpec = tween(300)),
+            exit = fadeOut(animationSpec = tween(300)),
+            modifier = Modifier.zIndex(10f)
+        ) {
+            FullscreenLyricsOverlay(
+                lyrics = lyricsState.lyrics,
+                currentLyricIndex = lyricsState.currentLyricIndex,
+                currentSong = trackState.currentSong,
+                progress = progressState.progress,
+                progressMs = progressState.progressMs,
+                durationMs = progressState.durationMs,
+                isPlaying = controlsState.isPlaying,
+                colors = colors,
+                onExit = { isFullscreenLyrics = false },
+                onTogglePlay = onTogglePlay,
+                onPrevious = onPrevious,
+                onNext = onNext,
+                onChangeProgress = onChangeProgress
+            )
+        }
     }
 }
 
@@ -236,7 +279,8 @@ private fun LyricsCenterCard(
     lyrics: List<LyricLine>,
     currentLyricIndex: Int,
     colors: com.relaxmusic.app.ui.theme.RelaxMusicColorPalette,
-    onToggleContent: () -> Unit
+    onToggleContent: () -> Unit,
+    onEnterFullscreen: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onToggleContent),
@@ -244,7 +288,22 @@ private fun LyricsCenterCard(
         border = BorderStroke(1.dp, colors.panelBorder),
         colors = CardDefaults.cardColors(containerColor = colors.panelSurface)
     ) {
-        LyricsContent(lyrics = lyrics, currentLyricIndex = currentLyricIndex, colors = colors)
+        Box(modifier = Modifier.fillMaxWidth().height(320.dp)) {
+            LyricsContent(lyrics = lyrics, currentLyricIndex = currentLyricIndex, colors = colors)
+            // Fullscreen button
+            IconButton(
+                onClick = onEnterFullscreen,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(12.dp)
+            ) {
+                Icon(
+                    Icons.Rounded.Fullscreen,
+                    contentDescription = "全屏歌词",
+                    tint = colors.textSecondary
+                )
+            }
+        }
     }
 }
 
@@ -506,6 +565,217 @@ private fun UtilityActionCard(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+        }
+    }
+}
+
+@Composable
+private fun FullscreenLyricsOverlay(
+    lyrics: List<LyricLine>,
+    currentLyricIndex: Int,
+    currentSong: Song?,
+    progress: Float,
+    progressMs: Long,
+    durationMs: Long,
+    isPlaying: Boolean,
+    colors: com.relaxmusic.app.ui.theme.RelaxMusicColorPalette,
+    onExit: () -> Unit,
+    onTogglePlay: () -> Unit,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+    onChangeProgress: (Float) -> Unit
+) {
+    var showControls by remember { mutableStateOf(true) }
+    val lyricListState = rememberLazyListState()
+
+    // Auto-scroll lyrics
+    LaunchedEffect(currentLyricIndex, lyrics.size) {
+        if (currentLyricIndex >= 0 && lyrics.isNotEmpty()) {
+            val targetIndex = (currentLyricIndex - 6).coerceAtLeast(0)
+            lyricListState.animateScrollToItem(targetIndex)
+        }
+    }
+
+    // Auto-hide controls after 3 seconds
+    LaunchedEffect(showControls) {
+        if (showControls) {
+            kotlinx.coroutines.delay(3000)
+            showControls = false
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        colors.appBackgroundStart,
+                        colors.appBackgroundEnd,
+                        colors.appBackgroundStart
+                    )
+                )
+            )
+            .statusBarsPadding()
+            .navigationBarsPadding()
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onTap = { showControls = !showControls }
+                )
+            }
+    ) {
+        // Lyrics content (full screen)
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 32.dp)
+                .padding(top = 80.dp, bottom = 240.dp),
+            state = lyricListState,
+            verticalArrangement = Arrangement.spacedBy(0.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            itemsIndexed(lyrics) { index, line ->
+                val isActive = index == currentLyricIndex
+                Text(
+                    text = line.text,
+                    color = if (isActive) colors.accent else colors.textSecondary.copy(alpha = 0.6f),
+                    fontSize = if (isActive) 24.sp else 18.sp,
+                    style = if (isActive) MaterialTheme.typography.titleLarge else MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp),
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+
+        // Top bar: exit button
+        AnimatedVisibility(
+            visible = showControls,
+            enter = fadeIn(animationSpec = tween(200)),
+            exit = fadeOut(animationSpec = tween(200)),
+            modifier = Modifier.align(Alignment.TopStart)
+        ) {
+            IconButton(
+                onClick = onExit,
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(colors.panelSurface)
+                        .padding(4.dp)
+                ) {
+                    Icon(
+                        Icons.Rounded.ExpandLess,
+                        contentDescription = "退出全屏",
+                        tint = colors.textPrimary
+                    )
+                }
+            }
+        }
+
+        // Bottom controls overlay
+        AnimatedVisibility(
+            visible = showControls,
+            enter = fadeIn(animationSpec = tween(200)),
+            exit = fadeOut(animationSpec = tween(200)),
+            modifier = Modifier.align(Alignment.BottomCenter)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                colors.appBackgroundEnd.copy(alpha = 0.95f)
+                            )
+                        )
+                    )
+                    .padding(bottom = 32.dp, top = 24.dp, start = 24.dp, end = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Song info
+                Text(
+                    text = currentSong?.title ?: "",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = colors.textPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = currentSong?.artist ?: "",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colors.textSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                // Progress slider
+                var pendingProgress by remember { mutableStateOf<Float?>(null) }
+                val sliderValue = pendingProgress ?: progress
+
+                Slider(
+                    value = sliderValue,
+                    onValueChange = { pendingProgress = it },
+                    onValueChangeFinished = {
+                        pendingProgress?.let(onChangeProgress)
+                        pendingProgress = null
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = TimeFormatter.formatSongDuration(progressMs),
+                        color = colors.textSecondary,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        text = TimeFormatter.formatSongDuration(durationMs),
+                        color = colors.textSecondary,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+
+                // Playback controls
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(32.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = onPrevious) {
+                        Icon(
+                            Icons.Rounded.FastRewind,
+                            contentDescription = "previous",
+                            tint = colors.textPrimary,
+                            modifier = Modifier.scale(1.3f)
+                        )
+                    }
+                    IconButton(onClick = onTogglePlay) {
+                        Icon(
+                            imageVector = if (isPlaying) Icons.Rounded.PauseCircle else Icons.Rounded.PlayCircle,
+                            contentDescription = "toggle play",
+                            tint = colors.textPrimary,
+                            modifier = Modifier.scale(2f)
+                        )
+                    }
+                    IconButton(onClick = onNext) {
+                        Icon(
+                            Icons.Rounded.FastForward,
+                            contentDescription = "next",
+                            tint = colors.textPrimary,
+                            modifier = Modifier.scale(1.3f)
+                        )
+                    }
+                }
+            }
         }
     }
 }

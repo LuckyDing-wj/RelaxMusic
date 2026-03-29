@@ -10,6 +10,7 @@ data class LibraryUiState(
     val libraryDirectories: List<String> = emptyList(),
     val libraryDirectoryLabels: Map<String, String> = emptyMap(),
     val scanningDirectoryLabel: String? = null,
+    val allSongs: List<Song> = emptyList(),
     val songs: List<Song> = emptyList(),
     val favoriteSongs: List<Song> = emptyList(),
     val recentSongs: List<Song> = emptyList(),
