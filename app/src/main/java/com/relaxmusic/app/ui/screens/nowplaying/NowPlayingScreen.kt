@@ -2,17 +2,22 @@ package com.relaxmusic.app.ui.screens.nowplaying
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -50,6 +55,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -59,6 +65,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import kotlin.math.absoluteValue
 import com.relaxmusic.app.data.local.EmbeddedArtworkReader
 import com.relaxmusic.app.domain.model.LyricLine
 import com.relaxmusic.app.domain.model.PlayMode
@@ -387,36 +394,67 @@ private fun LyricsContent(
     currentLyricIndex: Int,
     colors: com.relaxmusic.app.ui.theme.RelaxMusicColorPalette
 ) {
-    val lyricListState = rememberLazyListState()
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val lyricListState = rememberLazyListState()
+        val edgePadding = (maxHeight * 0.34f).coerceAtLeast(72.dp)
 
-    LaunchedEffect(currentLyricIndex, lyrics.size) {
-        if (currentLyricIndex >= 0 && lyrics.isNotEmpty()) {
-            val visibleItems = lyricListState.layoutInfo.visibleItemsInfo
-            val firstVisible = visibleItems.firstOrNull()?.index ?: 0
-            val lastVisible = visibleItems.lastOrNull()?.index ?: 0
-            val targetIndex = (currentLyricIndex - 4).coerceAtLeast(0)
-
-            if (currentLyricIndex <= firstVisible + 1 || currentLyricIndex >= lastVisible - 1) {
-                lyricListState.animateScrollToItem(targetIndex)
+        LaunchedEffect(currentLyricIndex, lyrics.size) {
+            if (currentLyricIndex >= 0 && lyrics.isNotEmpty()) {
+                val targetIndex = (currentLyricIndex - 1).coerceAtLeast(0)
+                lyricListState.animateScrollToItem(index = targetIndex)
             }
         }
-    }
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 4.dp, vertical = 8.dp),
-        state = lyricListState,
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        itemsIndexed(lyrics) { index, line ->
-            Text(
-                text = line.text,
-                color = if (index == currentLyricIndex) colors.accent else colors.textSecondary,
-                style = if (index == currentLyricIndex) MaterialTheme.typography.titleLarge else MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center
-            )
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 4.dp),
+            state = lyricListState,
+            contentPadding = PaddingValues(vertical = edgePadding),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            itemsIndexed(lyrics) { index, line ->
+                val distance = (index - currentLyricIndex).absoluteValue
+                val targetAlpha = when {
+                    currentLyricIndex < 0 -> 0.58f
+                    distance == 0 -> 1f
+                    distance == 1 -> 0.72f
+                    distance == 2 -> 0.46f
+                    else -> 0.24f
+                }
+                val targetScale = when {
+                    currentLyricIndex < 0 -> 1f
+                    distance == 0 -> 1.08f
+                    distance == 1 -> 1f
+                    else -> 0.94f
+                }
+                val animatedAlpha by animateFloatAsState(
+                    targetValue = targetAlpha,
+                    animationSpec = tween(durationMillis = 220),
+                    label = "lyric-alpha"
+                )
+                val animatedScale by animateFloatAsState(
+                    targetValue = targetScale,
+                    animationSpec = spring(dampingRatio = 0.9f, stiffness = 500f),
+                    label = "lyric-scale"
+                )
+                val animatedColor by animateColorAsState(
+                    targetValue = if (distance == 0) colors.accent else colors.textSecondary.copy(alpha = 0.9f),
+                    animationSpec = tween(durationMillis = 220),
+                    label = "lyric-color"
+                )
+
+                Text(
+                    text = line.text,
+                    color = animatedColor,
+                    style = if (distance == 0) MaterialTheme.typography.titleLarge else MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .alpha(animatedAlpha)
+                        .scale(animatedScale),
+                    textAlign = TextAlign.Center
+                )
+            }
         }
     }
 }
