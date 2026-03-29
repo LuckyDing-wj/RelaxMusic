@@ -224,10 +224,7 @@ fun RelaxMusicApp() {
                                     onPrevious = playerViewModel::previous,
                                     onChangeProgress = playerViewModel::seekTo,
                                     onCyclePlayMode = playerViewModel::cyclePlayMode,
-                                    onOpenTimer = { timerSheetVisible = true },
-                                    onOpenQueue = {
-                                        playerOverlayState = playerOverlayState.openQueue()
-                                    }
+                                    onOpenTimer = { timerSheetVisible = true }
                                 )
                             }
                         }

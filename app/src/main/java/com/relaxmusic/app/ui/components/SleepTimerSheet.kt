@@ -25,11 +25,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import com.relaxmusic.app.ui.screens.nowplaying.formatSleepTimerRemainingDescription
 
 private enum class SleepTimerSheetMode {
     PRESET,
     CUSTOM
+}
+
+private fun formatSleepTimerRemainingDescription(remainSeconds: Long): String {
+    if (remainSeconds <= 0) return "选择一个预设时间，到点后停止播放"
+    val minutes = remainSeconds / 60
+    val seconds = remainSeconds % 60
+    return when {
+        minutes > 0 && seconds > 0 -> "剩余 ${minutes} 分 ${seconds} 秒"
+        minutes > 0 -> "剩余 ${minutes} 分钟"
+        else -> "剩余 ${seconds} 秒"
+    }
 }
 
 @Composable

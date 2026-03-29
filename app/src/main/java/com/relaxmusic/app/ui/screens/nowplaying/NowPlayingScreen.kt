@@ -1,5 +1,7 @@
 package com.relaxmusic.app.ui.screens.nowplaying
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -8,6 +10,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
@@ -36,9 +39,9 @@ import androidx.compose.material.icons.rounded.FastForward
 import androidx.compose.material.icons.rounded.FastRewind
 import androidx.compose.material.icons.rounded.Fullscreen
 import androidx.compose.material.icons.rounded.Loop
+import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.PauseCircle
 import androidx.compose.material.icons.rounded.PlayCircle
-import androidx.compose.material.icons.rounded.QueueMusic
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -50,6 +53,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -58,17 +62,23 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import com.relaxmusic.app.data.local.EmbeddedArtworkReader
 import com.relaxmusic.app.domain.model.LyricLine
 import com.relaxmusic.app.domain.model.PlayMode
 import com.relaxmusic.app.domain.model.Song
 import com.relaxmusic.app.ui.theme.RelaxMusicColors
 import com.relaxmusic.app.utils.TimeFormatter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 enum class CenterContentMode {
     ARTWORK,
@@ -89,28 +99,6 @@ fun CenterContentMode.nextOnTap(hasLyrics: Boolean): CenterContentMode {
         CenterContentMode.ARTWORK -> if (hasLyrics) CenterContentMode.LYRICS else CenterContentMode.NO_LYRICS
         CenterContentMode.LYRICS,
         CenterContentMode.NO_LYRICS -> CenterContentMode.ARTWORK
-    }
-}
-
-fun formatSleepTimerRemainingDescription(remainSeconds: Long): String {
-    if (remainSeconds <= 0) return "选择一个预设时间，到点后停止播放"
-    val minutes = remainSeconds / 60
-    val seconds = remainSeconds % 60
-    return when {
-        minutes > 0 && seconds > 0 -> "剩余 ${minutes} 分 ${seconds} 秒"
-        minutes > 0 -> "剩余 ${minutes} 分钟"
-        else -> "剩余 ${seconds} 秒"
-    }
-}
-
-fun formatSleepTimerRemainingButtonLabel(remainSeconds: Long): String {
-    if (remainSeconds <= 0) return "定时"
-    val minutes = remainSeconds / 60
-    val seconds = remainSeconds % 60
-    return when {
-        minutes > 0 && seconds > 0 -> "剩余 ${minutes}m ${seconds}s"
-        minutes > 0 -> "剩余 ${minutes}m"
-        else -> "剩余 ${seconds}s"
     }
 }
 
@@ -137,8 +125,7 @@ fun NowPlayingScreen(
     onPrevious: () -> Unit,
     onChangeProgress: (Float) -> Unit,
     onCyclePlayMode: () -> Unit,
-    onOpenTimer: () -> Unit,
-    onOpenQueue: () -> Unit
+    onOpenTimer: () -> Unit
 ) {
     val colors = RelaxMusicColors
     var centerContentMode by remember(artworkState.currentSong?.id) { mutableStateOf(CenterContentMode.ARTWORK) }
@@ -163,6 +150,7 @@ fun NowPlayingScreen(
 
             when (resolvedCenterContentMode) {
                 CenterContentMode.ARTWORK -> ArtworkCenterCard(
+                    currentSong = artworkState.currentSong,
                     isPlaying = artworkState.isPlaying,
                     colors = colors,
                     onToggleContent = {
@@ -202,13 +190,10 @@ fun NowPlayingScreen(
             PlaybackControlsSection(
                 playMode = controlsState.playMode,
                 isPlaying = controlsState.isPlaying,
-                sleepTimerRemaining = controlsState.sleepTimerRemaining,
                 onCyclePlayMode = onCyclePlayMode,
                 onPrevious = onPrevious,
                 onTogglePlay = onTogglePlay,
-                onNext = onNext,
-                onOpenQueue = onOpenQueue,
-                onOpenTimer = onOpenTimer
+                onNext = onNext
             )
         }
 
@@ -260,6 +245,7 @@ private fun NowPlayingHeader(
 
 @Composable
 private fun ArtworkCenterCard(
+    currentSong: Song?,
     isPlaying: Boolean,
     colors: com.relaxmusic.app.ui.theme.RelaxMusicColorPalette,
     onToggleContent: () -> Unit
@@ -270,7 +256,7 @@ private fun ArtworkCenterCard(
         border = BorderStroke(1.dp, colors.panelBorder),
         colors = CardDefaults.cardColors(containerColor = colors.panelSurface)
     ) {
-        ArtworkContent(isPlaying = isPlaying, colors = colors)
+        ArtworkContent(currentSong = currentSong, isPlaying = isPlaying, colors = colors)
     }
 }
 
@@ -325,9 +311,19 @@ private fun NoLyricsCenterCard(
 
 @Composable
 private fun ArtworkContent(
+    currentSong: Song?,
     isPlaying: Boolean,
     colors: com.relaxmusic.app.ui.theme.RelaxMusicColorPalette
 ) {
+    val context = LocalContext.current
+    val artworkReader = remember { EmbeddedArtworkReader() }
+    val albumArtBitmap by produceState<Bitmap?>(initialValue = null, currentSong?.uri) {
+        value = withContext(Dispatchers.IO) {
+            artworkReader.read(context, currentSong?.uri)?.let { bytes ->
+                BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+            }
+        }
+    }
     val albumArtScale = if (isPlaying) {
         rememberInfiniteTransition(label = "album-art").animateFloat(
             initialValue = 1f,
@@ -352,7 +348,31 @@ private fun ArtworkContent(
             .background(colors.accent.copy(alpha = 0.16f)),
         contentAlignment = Alignment.Center
     ) {
-        Text("Album Art", color = colors.textSecondary)
+        if (albumArtBitmap != null) {
+            Image(
+                bitmap = albumArtBitmap!!.asImageBitmap(),
+                contentDescription = currentSong?.title ?: "当前歌曲封面",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.MusicNote,
+                    contentDescription = "暂无封面",
+                    tint = colors.accent
+                )
+                Text(
+                    text = currentSong?.album?.takeIf { it.isNotBlank() } ?: "暂无内嵌封面",
+                    color = colors.textSecondary,
+                    style = MaterialTheme.typography.titleMedium,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
     }
 }
 
@@ -480,15 +500,11 @@ private fun ProgressSection(
 private fun PlaybackControlsSection(
     playMode: PlayMode,
     isPlaying: Boolean,
-    sleepTimerRemaining: Long,
     onCyclePlayMode: () -> Unit,
     onPrevious: () -> Unit,
     onTogglePlay: () -> Unit,
-    onNext: () -> Unit,
-    onOpenQueue: () -> Unit,
-    onOpenTimer: () -> Unit
+    onNext: () -> Unit
 ) {
-    val colors = RelaxMusicColors
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -509,31 +525,12 @@ private fun PlaybackControlsSection(
             }
         }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            UtilityActionCard(
-                title = playModeLabel(playMode.name),
-                icon = { Icon(Icons.Rounded.Loop, contentDescription = "play mode") },
-                onClick = onCyclePlayMode,
-                modifier = Modifier.weight(1f)
-            )
-            UtilityActionCard(
-                title = "播放队列",
-                icon = { Icon(Icons.Rounded.QueueMusic, contentDescription = "queue") },
-                onClick = onOpenQueue,
-                modifier = Modifier.weight(1f)
-            )
-            UtilityActionCard(
-                title = formatSleepTimerRemainingButtonLabel(sleepTimerRemaining),
-                icon = { Icon(Icons.Rounded.Bedtime, contentDescription = "timer") },
-                onClick = onOpenTimer,
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        Text("播放模式: ${playModeLabel(playMode.name)}", color = colors.textSecondary, style = MaterialTheme.typography.bodyMedium)
+        UtilityActionCard(
+            title = playModeLabel(playMode.name),
+            icon = { Icon(Icons.Rounded.Loop, contentDescription = "play mode") },
+            onClick = onCyclePlayMode,
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 
