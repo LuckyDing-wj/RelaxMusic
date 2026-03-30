@@ -23,6 +23,7 @@ class PlaybackService : MediaSessionService() {
     private var mediaSession: MediaSession? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var playbackState: PlaybackState = PlaybackState()
+    private var notificationState: PlaybackNotificationState? = null
     private var isForeground = false
 
     override fun onCreate() {
@@ -31,8 +32,13 @@ class PlaybackService : MediaSessionService() {
         mediaSession = MediaSession.Builder(this, app.appContainer.musicPlayerController.exoPlayer).build()
         serviceScope.launch {
             app.appContainer.playerRepository.playbackState.collectLatest { state ->
+                val nextNotificationState = state.toNotificationState()
+                val shouldRefreshNotification = nextNotificationState != notificationState
                 playbackState = state
-                refreshNotification()
+                if (shouldRefreshNotification) {
+                    notificationState = nextNotificationState
+                    refreshNotification()
+                }
             }
         }
     }
@@ -45,7 +51,6 @@ class PlaybackService : MediaSessionService() {
             PlaybackAction.PREVIOUS -> app.appContainer.playerRepository.playPrevious()
             PlaybackAction.STOP -> app.appContainer.playerRepository.stop()
         }
-        refreshNotification()
         return START_NOT_STICKY
     }
 
@@ -70,6 +75,7 @@ class PlaybackService : MediaSessionService() {
             } else {
                 notificationManager()?.cancel(PlaybackNotification.NOTIFICATION_ID)
             }
+            notificationState = null
             stopSelf()
             return
         }

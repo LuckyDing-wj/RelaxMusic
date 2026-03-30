@@ -13,22 +13,21 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import com.relaxmusic.app.RelaxMusicApplication
 import com.relaxmusic.app.data.local.UriPermissionManager
@@ -64,19 +63,20 @@ fun RelaxMusicApp() {
         factory = SettingsViewModelFactory(application.appContainer.settingsRepository)
     )
 
-    val libraryUiState by libraryViewModel.state.collectAsState()
+    val libraryUiState by libraryViewModel.state.collectAsStateWithLifecycle()
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
 
     var topLevelDestination by remember { mutableStateOf(TopLevelDestination.HOME) }
     var timerSheetVisible by remember { mutableStateOf(false) }
     val colors = RelaxMusicColors
+    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         playerViewModel.bindContext(context)
     }
 
-    LaunchedEffect(playerViewModel.uiState.currentSong?.id) {
-        libraryViewModel.setCurrentSong(playerViewModel.uiState.currentSong?.id)
+    LaunchedEffect(playerViewModel.nowPlayingTrackUiState.currentSong?.id) {
+        libraryViewModel.setCurrentSong(playerViewModel.nowPlayingTrackUiState.currentSong?.id)
     }
 
     LaunchedEffect(currentBackStackEntry?.destination?.route) {
@@ -136,7 +136,7 @@ fun RelaxMusicApp() {
                         onPickFolder = { pickFolderLauncher.launch(null) },
                         onOpenTimer = { timerSheetVisible = true },
                         onExportBackup = {
-                            CoroutineScope(Dispatchers.Main).launch {
+                            coroutineScope.launch {
                                 val result = backupManager.exportBackup()
                                 settingsViewModel.setBackupStatus(
                                     result.fold(
@@ -147,7 +147,7 @@ fun RelaxMusicApp() {
                             }
                         },
                         onImportBackup = {
-                            CoroutineScope(Dispatchers.Main).launch {
+                            coroutineScope.launch {
                                 val result = backupManager.importBackup()
                                 settingsViewModel.setBackupStatus(
                                     result.fold(
@@ -169,7 +169,7 @@ fun RelaxMusicApp() {
                 ) {
                     SleepTimerSheet(
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
-                        remainSeconds = playerViewModel.uiState.sleepTimerRemaining,
+                        remainSeconds = playerViewModel.nowPlayingControlsUiState.sleepTimerRemaining,
                         onPresetClick = { minutes ->
                             playerViewModel.startSleepTimer(minutes)
                             timerSheetVisible = false

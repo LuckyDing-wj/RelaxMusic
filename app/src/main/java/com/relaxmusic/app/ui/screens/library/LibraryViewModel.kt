@@ -4,13 +4,21 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.relaxmusic.app.domain.repository.LibraryRepository
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class LibraryViewModel(
     private val libraryRepository: LibraryRepository
 ) : ViewModel() {
@@ -33,6 +41,21 @@ class LibraryViewModel(
         val error: String?,
         val playingId: String?
     )
+
+    private val effectiveQuery = query
+        .flatMapLatest { rawQuery ->
+            val normalized = rawQuery.trim()
+            if (normalized.isBlank()) {
+                flowOf("")
+            } else {
+                flow {
+                    delay(250)
+                    emit(normalized)
+                }
+            }
+        }
+        .distinctUntilChanged()
+        .onStart { emit("") }
 
     private val transientState = combine(
         libraryPathLabel,
@@ -64,7 +87,8 @@ class LibraryViewModel(
         libraryRepository.observeAlbums(),
         libraryRepository.observeArtists(),
         libraryRepository.observePlaylists(),
-        transientState
+        transientState,
+        effectiveQuery
     ) { values ->
         val songs = values[0] as List<com.relaxmusic.app.domain.model.Song>
         val favorites = values[1] as List<com.relaxmusic.app.domain.model.Song>
@@ -74,17 +98,16 @@ class LibraryViewModel(
         val artists = values[5] as List<com.relaxmusic.app.domain.model.Artist>
         val playlists = values[6] as List<com.relaxmusic.app.domain.model.Playlist>
         val transient = values[7] as LibraryTransientState
+        val queryKeyword = (values[8] as String).lowercase()
 
-        val queryValue = transient.queryValue
-        val filteredSongs = if (queryValue.isBlank()) {
+        val filteredSongs = if (queryKeyword.isBlank()) {
             songs
         } else {
-            val keyword = queryValue.trim().lowercase()
             songs.filter {
-                it.title.lowercase().contains(keyword) ||
-                    it.artist.lowercase().contains(keyword) ||
-                    it.album.lowercase().contains(keyword) ||
-                    it.fileName.lowercase().contains(keyword)
+                it.title.lowercase().contains(queryKeyword) ||
+                    it.artist.lowercase().contains(queryKeyword) ||
+                    it.album.lowercase().contains(queryKeyword) ||
+                    it.fileName.lowercase().contains(queryKeyword)
             }
         }
 
@@ -103,7 +126,7 @@ class LibraryViewModel(
             playlists = playlists,
             totalSongCount = songs.size,
             scanning = transient.isScanning,
-            query = queryValue,
+            query = transient.queryValue,
             statusMessage = transient.status,
             errorMessage = transient.error,
             currentSongId = transient.playingId
@@ -144,7 +167,9 @@ class LibraryViewModel(
     }
 
     fun setCurrentSong(songId: String?) {
-        currentSongId.value = songId
+        if (currentSongId.value != songId) {
+            currentSongId.value = songId
+        }
     }
 
     fun toggleFavorite(songId: String) {

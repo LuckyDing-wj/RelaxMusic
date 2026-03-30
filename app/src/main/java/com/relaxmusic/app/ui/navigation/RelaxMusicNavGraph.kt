@@ -1,8 +1,8 @@
 package com.relaxmusic.app.ui.navigation
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -233,7 +233,7 @@ fun RelaxMusicNavGraph(
         ) { backStackEntry ->
             val playlistId = backStackEntry.arguments?.getLong(RelaxMusicDestination.PlaylistDetail.PLAYLIST_ID_ARG) ?: -1L
             val playlistSongsFlow = remember(playlistId) { libraryViewModel.observePlaylistSongs(playlistId) }
-            val playlistSongs by playlistSongsFlow.collectAsState(initial = emptyList())
+            val playlistSongs by playlistSongsFlow.collectAsStateWithLifecycle(initialValue = emptyList())
             val playlist = libraryUiState.playlists.firstOrNull { it.id == playlistId }
 
             PlaylistDetailScreen(

@@ -43,6 +43,7 @@ class PlayerRepositoryImpl(
     private var progressJob: Job? = null
     private var lyricLoadJob: Job? = null
     private var currentSongObserver: ((Song?) -> Unit)? = null
+    private var observedSongId: String? = null
     private var loadedLyricSongId: String? = null
     private var loadingLyricSongId: String? = null
     private var cachedLyrics = emptyList<com.relaxmusic.app.domain.model.LyricLine>()
@@ -171,7 +172,9 @@ class PlayerRepositoryImpl(
 
     override fun setCurrentSongObserver(observer: (Song?) -> Unit) {
         currentSongObserver = observer
-        observer(currentSong())
+        val song = currentSong()
+        observedSongId = song?.id
+        observer(song)
     }
 
     private fun currentSong(): Song? {
@@ -184,7 +187,7 @@ class PlayerRepositoryImpl(
         val current = currentSong()
         val lyrics = current.resolveLyrics()
         val currentLyricIndex = lyrics.indexOfLast { it.timeMs <= progressMs }
-        _playbackState.value = _playbackState.value.copy(
+        val nextState = _playbackState.value.copy(
             currentSong = current,
             isPlaying = playerController.isPlaying(),
             progressMs = progressMs,
@@ -194,7 +197,13 @@ class PlayerRepositoryImpl(
             lyrics = lyrics,
             currentLyricIndex = currentLyricIndex
         )
-        currentSongObserver?.invoke(current)
+        if (nextState != _playbackState.value) {
+            _playbackState.value = nextState
+        }
+        if (observedSongId != current?.id) {
+            observedSongId = current?.id
+            currentSongObserver?.invoke(current)
+        }
     }
 
     private fun Song?.resolveLyrics(): List<com.relaxmusic.app.domain.model.LyricLine> {
@@ -229,10 +238,13 @@ class PlayerRepositoryImpl(
     private fun publishLyricState(songId: String) {
         if (_playbackState.value.currentSong?.id != songId && currentSong()?.id != songId) return
         val progressMs = playerController.currentPosition().coerceAtLeast(0L)
-        _playbackState.value = _playbackState.value.copy(
+        val nextState = _playbackState.value.copy(
             lyrics = cachedLyrics,
             currentLyricIndex = cachedLyrics.indexOfLast { it.timeMs <= progressMs }
         )
+        if (nextState != _playbackState.value) {
+            _playbackState.value = nextState
+        }
     }
 
     private fun clearLyricsAndReturnEmpty(): List<com.relaxmusic.app.domain.model.LyricLine> {
