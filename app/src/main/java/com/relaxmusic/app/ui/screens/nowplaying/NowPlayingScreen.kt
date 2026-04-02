@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -168,8 +167,8 @@ fun NowPlayingScreen(
                     BottomPlaybackDock(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .navigationBarsPadding()
-                            .padding(horizontal = 20.dp, vertical = 12.dp),
+                            .padding(horizontal = 20.dp)
+                            .padding(top = 8.dp, bottom = 4.dp),
                         currentSong = trackState.currentSong,
                         isPlaying = trackState.isPlaying,
                         progress = progressState.progress,
@@ -472,7 +471,7 @@ private fun LyricsContent(
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val lyricListState = rememberLazyListState()
-        val edgePadding = (maxHeight * 0.34f).coerceAtLeast(72.dp)
+        val edgePadding = (maxHeight * 0.30f).coerceAtLeast(72.dp)
 
         LaunchedEffect(currentLyricIndex, lyrics.size) {
             if (currentLyricIndex >= 0 && lyrics.isNotEmpty()) {

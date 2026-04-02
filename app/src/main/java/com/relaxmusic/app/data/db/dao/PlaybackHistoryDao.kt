@@ -13,6 +13,18 @@ interface PlaybackHistoryDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(entity: PlaybackHistoryEntity)
 
+    @Query(
+        """
+        DELETE FROM playback_history
+        WHERE id NOT IN (
+            SELECT id FROM playback_history
+            ORDER BY played_at DESC, id DESC
+            LIMIT :limit
+        )
+        """
+    )
+    suspend fun trimToRecent(limit: Int)
+
     @Query("SELECT * FROM playback_history ORDER BY played_at DESC LIMIT :limit")
     fun observeRecent(limit: Int): Flow<List<PlaybackHistoryEntity>>
 

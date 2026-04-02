@@ -151,6 +151,7 @@ class LibraryRepositoryImpl(
             val playedAt = System.currentTimeMillis()
             songDao.markPlayed(songId, playedAt)
             playbackHistoryDao.insert(PlaybackHistoryEntity(songId = songId, playedAt = playedAt))
+            playbackHistoryDao.trimToRecent(MAX_PLAYBACK_HISTORY)
         }
     }
 
@@ -222,5 +223,6 @@ class LibraryRepositoryImpl(
         const val KEY_LIBRARY_URI = "library_tree_uri"
         const val KEY_LIBRARY_URIS = "library_tree_uris"
         const val SEPARATOR = "||"
+        const val MAX_PLAYBACK_HISTORY = 30
     }
 }

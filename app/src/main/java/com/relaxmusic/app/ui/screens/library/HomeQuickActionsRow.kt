@@ -46,7 +46,9 @@ fun HomeQuickActionsRow(
                     fillWidth = false
                 ) {
                     Column(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 14.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp, vertical = 14.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
@@ -60,13 +62,15 @@ fun HomeQuickActionsRow(
                             text = action.destinationLabel,
                             style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium),
                             color = RelaxMusicColors.textPrimary,
-                            textAlign = TextAlign.Center
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
                         )
                         Text(
                             text = action.subtitle,
                             style = MaterialTheme.typography.bodySmall,
                             color = RelaxMusicColors.textSecondary,
-                            textAlign = TextAlign.Center
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }

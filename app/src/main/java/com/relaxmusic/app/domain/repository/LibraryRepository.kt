@@ -11,7 +11,7 @@ interface LibraryRepository {
     fun searchSongs(query: String): Flow<List<Song>>
     fun observeFavorites(): Flow<List<Song>>
     fun observeRecentlyPlayed(limit: Int = 10): Flow<List<Song>>
-    fun observePlaybackHistory(limit: Int = 100): Flow<List<Song>>
+    fun observePlaybackHistory(limit: Int = 30): Flow<List<Song>>
     fun observeAlbums(): Flow<List<Album>>
     fun observeArtists(): Flow<List<Artist>>
     fun observePlaylists(): Flow<List<Playlist>>
