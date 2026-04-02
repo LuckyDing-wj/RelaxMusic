@@ -99,7 +99,6 @@ fun RelaxMusicApp() {
             TopLevelDestination.HOME -> RelaxMusicDestination.Home.route
             TopLevelDestination.PLAYER -> RelaxMusicDestination.NowPlaying.route
             TopLevelDestination.LISTS -> RelaxMusicDestination.ListsHub.route
-            TopLevelDestination.SETTINGS -> RelaxMusicDestination.Settings.route
         }
         navController.navigate(route) {
             popUpTo(navController.graph.findStartDestination().id) {

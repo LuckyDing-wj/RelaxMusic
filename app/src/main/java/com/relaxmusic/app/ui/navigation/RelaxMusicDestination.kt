@@ -65,7 +65,7 @@ sealed class RelaxMusicDestination(val route: String) {
                     route == PlaylistDetail.route ||
                     route.startsWith("${PlaylistDetail.BASE_ROUTE}/") -> TopLevelDestination.LISTS
 
-                route == Settings.route -> TopLevelDestination.SETTINGS
+                route == Settings.route -> TopLevelDestination.HOME
                 else -> null
             }
         }

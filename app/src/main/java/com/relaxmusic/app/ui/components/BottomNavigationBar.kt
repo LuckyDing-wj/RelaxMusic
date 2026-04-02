@@ -4,7 +4,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.rounded.QueueMusic
-import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -20,8 +19,7 @@ import com.relaxmusic.app.ui.theme.RelaxMusicColors
 enum class TopLevelDestination {
     HOME,
     PLAYER,
-    LISTS,
-    SETTINGS
+    LISTS
 }
 
 @Composable
@@ -65,13 +63,6 @@ fun BottomNavigationBar(
                 onClick = { onSelect(TopLevelDestination.LISTS) },
                 icon = { Icon(Icons.Rounded.QueueMusic, contentDescription = "列表") },
                 label = { Text("列表") },
-                colors = itemColors
-            )
-            NavigationBarItem(
-                selected = current == TopLevelDestination.SETTINGS,
-                onClick = { onSelect(TopLevelDestination.SETTINGS) },
-                icon = { Icon(Icons.Rounded.Settings, contentDescription = "设置") },
-                label = { Text("设置") },
                 colors = itemColors
             )
         }

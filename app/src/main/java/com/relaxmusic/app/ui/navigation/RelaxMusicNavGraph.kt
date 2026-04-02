@@ -52,7 +52,6 @@ fun RelaxMusicNavGraph(
             TopLevelDestination.HOME -> RelaxMusicDestination.Home.route
             TopLevelDestination.PLAYER -> RelaxMusicDestination.NowPlaying.route
             TopLevelDestination.LISTS -> RelaxMusicDestination.ListsHub.route
-            TopLevelDestination.SETTINGS -> RelaxMusicDestination.Settings.route
         }
         navController.navigate(route) {
             popUpTo(navController.graph.findStartDestination().id) {
@@ -86,7 +85,7 @@ fun RelaxMusicNavGraph(
                 onOpenPlaylists = { navController.navigate(RelaxMusicDestination.Playlists.route) },
                 onOpenRecent = { navController.navigate(RelaxMusicDestination.History.route) },
                 onOpenNowPlaying = { navigateToTopLevel(TopLevelDestination.PLAYER) },
-                onOpenSettings = { navigateToTopLevel(TopLevelDestination.SETTINGS) },
+                onOpenSettings = { navController.navigate(RelaxMusicDestination.Settings.route) },
                 onOpenFavorites = { navController.navigate(RelaxMusicDestination.Favorites.route) }
             )
         }
@@ -289,7 +288,7 @@ fun RelaxMusicNavGraph(
                 onRemoveFolder = libraryViewModel::removeFolder,
                 onExportBackup = onExportBackup,
                 onImportBackup = onImportBackup,
-                showBackButton = false,
+                showBackButton = true,
                 onThemeModeChange = settingsViewModel::setThemeMode
             )
         }
