@@ -13,6 +13,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -42,11 +43,13 @@ import androidx.compose.material.icons.rounded.Reorder
 import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.RepeatOne
 import androidx.compose.material.icons.rounded.Shuffle
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -54,6 +57,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -99,6 +103,16 @@ fun CenterContentMode.nextOnTap(hasLyrics: Boolean): CenterContentMode {
     }
 }
 
+private const val DEFAULT_LYRIC_FONT_SCALE = 1f
+private val LYRIC_FONT_SCALE_RANGE = 0.85f..1.3f
+private val LYRIC_ACCENT_SWATCHES = listOf(
+    Color.Unspecified,
+    Color(0xFFFF8A65),
+    Color(0xFF4FC3F7),
+    Color(0xFFA5D66F),
+    Color(0xFFF48FB1)
+)
+
 private fun playModeLabel(raw: String): String {
     return when (raw) {
         "SEQUENCE" -> "顺序播放"
@@ -136,11 +150,21 @@ fun NowPlayingScreen(
     val colors = RelaxMusicColors
     val hasCurrentSong = trackState.currentSong != null
     var centerContentMode by remember(artworkState.currentSong?.id) { mutableStateOf(CenterContentMode.ARTWORK) }
+    var lyricStylePanelVisible by rememberSaveable { mutableStateOf(false) }
+    var lyricFontScale by rememberSaveable { mutableStateOf(DEFAULT_LYRIC_FONT_SCALE) }
+    var lyricAccentIndex by rememberSaveable { mutableStateOf(0) }
     val resolvedCenterContentMode = centerContentMode.normalize(hasLyrics = lyricsState.lyrics.isNotEmpty())
+    val lyricHighlightColor = LYRIC_ACCENT_SWATCHES
+        .getOrNull(lyricAccentIndex)
+        ?.takeIf { it != Color.Unspecified }
+        ?: colors.accent
 
     LaunchedEffect(resolvedCenterContentMode) {
         if (centerContentMode != resolvedCenterContentMode) {
             centerContentMode = resolvedCenterContentMode
+        }
+        if (resolvedCenterContentMode != CenterContentMode.LYRICS && lyricStylePanelVisible) {
+            lyricStylePanelVisible = false
         }
     }
 
@@ -205,7 +229,13 @@ fun NowPlayingScreen(
                         CenterContentMode.LYRICS -> LyricsCenterCard(
                             lyrics = lyricsState.lyrics,
                             currentLyricIndex = lyricsState.currentLyricIndex,
+                            lyricFontScale = lyricFontScale,
+                            lyricHighlightColor = lyricHighlightColor,
+                            showStyleControls = lyricStylePanelVisible,
                             colors = colors,
+                            onToggleStyleControls = { lyricStylePanelVisible = !lyricStylePanelVisible },
+                            onLyricFontScaleChange = { lyricFontScale = it },
+                            onLyricAccentChange = { lyricAccentIndex = it },
                             onToggleContent = {
                                 centerContentMode = resolvedCenterContentMode.nextOnTap(hasLyrics = lyricsState.lyrics.isNotEmpty())
                             }
@@ -353,7 +383,13 @@ private fun ArtworkCenterCard(
 private fun LyricsCenterCard(
     lyrics: List<LyricLine>,
     currentLyricIndex: Int,
+    lyricFontScale: Float,
+    lyricHighlightColor: Color,
+    showStyleControls: Boolean,
     colors: com.relaxmusic.app.ui.theme.RelaxMusicColorPalette,
+    onToggleStyleControls: () -> Unit,
+    onLyricFontScaleChange: (Float) -> Unit,
+    onLyricAccentChange: (Int) -> Unit,
     onToggleContent: () -> Unit
 ) {
     Box(
@@ -361,7 +397,17 @@ private fun LyricsCenterCard(
             .fillMaxSize()
             .clickable(onClick = onToggleContent)
     ) {
-        LyricsContent(lyrics = lyrics, currentLyricIndex = currentLyricIndex, colors = colors)
+        LyricsContent(
+            lyrics = lyrics,
+            currentLyricIndex = currentLyricIndex,
+            lyricFontScale = lyricFontScale,
+            lyricHighlightColor = lyricHighlightColor,
+            showStyleControls = showStyleControls,
+            colors = colors,
+            onToggleStyleControls = onToggleStyleControls,
+            onLyricFontScaleChange = onLyricFontScaleChange,
+            onLyricAccentChange = onLyricAccentChange
+        )
     }
 }
 
@@ -467,11 +513,28 @@ private fun ArtworkContent(
 private fun LyricsContent(
     lyrics: List<LyricLine>,
     currentLyricIndex: Int,
+    lyricFontScale: Float,
+    lyricHighlightColor: Color,
+    showStyleControls: Boolean,
+    onToggleStyleControls: () -> Unit,
+    onLyricFontScaleChange: (Float) -> Unit,
+    onLyricAccentChange: (Int) -> Unit,
     colors: com.relaxmusic.app.ui.theme.RelaxMusicColorPalette
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val lyricListState = rememberLazyListState()
         val edgePadding = (maxHeight * 0.30f).coerceAtLeast(72.dp)
+        val consumeTapModifier = Modifier.clickable(
+            interactionSource = remember { MutableInteractionSource() },
+            indication = null,
+            onClick = {}
+        )
+        val activeLyricStyle = MaterialTheme.typography.titleLarge.copy(
+            fontSize = MaterialTheme.typography.titleLarge.fontSize * lyricFontScale
+        )
+        val regularLyricStyle = MaterialTheme.typography.bodyLarge.copy(
+            fontSize = MaterialTheme.typography.bodyLarge.fontSize * lyricFontScale
+        )
 
         LaunchedEffect(currentLyricIndex, lyrics.size) {
             if (currentLyricIndex >= 0 && lyrics.isNotEmpty()) {
@@ -485,68 +548,157 @@ private fun LyricsContent(
             }
         }
 
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 4.dp),
-            state = lyricListState,
-            contentPadding = PaddingValues(vertical = edgePadding),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            itemsIndexed(lyrics) { index, line ->
-                val distance = (index - currentLyricIndex).absoluteValue
-                val targetAlpha = when {
-                    currentLyricIndex < 0 -> 0.58f
-                    distance == 0 -> 1f
-                    distance == 1 -> 0.72f
-                    distance == 2 -> 0.46f
-                    else -> 0.24f
-                }
-                val targetScale = when {
-                    currentLyricIndex < 0 -> 1f
-                    distance == 0 -> 1.08f
-                    distance == 1 -> 1f
-                    else -> 0.94f
-                }
-                val animatedAlpha by animateFloatAsState(
-                    targetValue = targetAlpha,
-                    animationSpec = tween(durationMillis = 220),
-                    label = "lyric-alpha"
-                )
-                val shouldAnimateEmphasis = distance <= 1
-                val renderedScale = if (shouldAnimateEmphasis) {
-                    animateFloatAsState(
-                        targetValue = targetScale,
-                        animationSpec = spring(dampingRatio = 0.9f, stiffness = 500f),
-                        label = "lyric-scale"
-                    ).value
-                } else {
-                    targetScale
-                }
-                val renderedColor = if (shouldAnimateEmphasis) {
-                    animateColorAsState(
-                        targetValue = if (distance == 0) {
-                            colors.accent
-                        } else {
-                            colors.textSecondary.copy(alpha = 0.9f)
-                        },
+        Box(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 4.dp),
+                state = lyricListState,
+                contentPadding = PaddingValues(vertical = edgePadding),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                itemsIndexed(lyrics) { index, line ->
+                    val distance = (index - currentLyricIndex).absoluteValue
+                    val targetAlpha = when {
+                        currentLyricIndex < 0 -> 0.58f
+                        distance == 0 -> 1f
+                        distance == 1 -> 0.72f
+                        distance == 2 -> 0.46f
+                        else -> 0.24f
+                    }
+                    val targetScale = when {
+                        currentLyricIndex < 0 -> 1f
+                        distance == 0 -> 1.08f
+                        distance == 1 -> 1f
+                        else -> 0.94f
+                    }
+                    val animatedAlpha by animateFloatAsState(
+                        targetValue = targetAlpha,
                         animationSpec = tween(durationMillis = 220),
-                        label = "lyric-color"
-                    ).value
-                } else {
-                    colors.textSecondary.copy(alpha = 0.9f)
+                        label = "lyric-alpha"
+                    )
+                    val shouldAnimateEmphasis = distance <= 1
+                    val renderedScale = if (shouldAnimateEmphasis) {
+                        animateFloatAsState(
+                            targetValue = targetScale,
+                            animationSpec = spring(dampingRatio = 0.9f, stiffness = 500f),
+                            label = "lyric-scale"
+                        ).value
+                    } else {
+                        targetScale
+                    }
+                    val renderedColor = if (shouldAnimateEmphasis) {
+                        animateColorAsState(
+                            targetValue = if (distance == 0) {
+                                lyricHighlightColor
+                            } else {
+                                colors.textSecondary.copy(alpha = 0.9f)
+                            },
+                            animationSpec = tween(durationMillis = 220),
+                            label = "lyric-color"
+                        ).value
+                    } else {
+                        colors.textSecondary.copy(alpha = 0.9f)
+                    }
+
+                    Text(
+                        text = line.text,
+                        color = renderedColor,
+                        style = if (distance == 0) activeLyricStyle else regularLyricStyle,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .alpha(animatedAlpha)
+                            .scale(renderedScale),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+
+            Column(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 10.dp, end = 4.dp)
+                    .then(consumeTapModifier),
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                PremiumSurface(
+                    modifier = Modifier
+                        .size(46.dp)
+                        .clickable(onClick = onToggleStyleControls),
+                    strong = showStyleControls,
+                    fillWidth = false,
+                    shape = RoundedCornerShape(18.dp)
+                ) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Rounded.Tune,
+                            contentDescription = "歌词样式",
+                            tint = colors.textPrimary
+                        )
+                    }
                 }
 
-                Text(
-                    text = line.text,
-                    color = renderedColor,
-                    style = if (distance == 0) MaterialTheme.typography.titleLarge else MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .alpha(animatedAlpha)
-                        .scale(renderedScale),
-                    textAlign = TextAlign.Center
-                )
+                if (showStyleControls) {
+                    PremiumSurface(
+                        modifier = Modifier.width(224.dp),
+                        strong = true,
+                        fillWidth = false,
+                        shape = RoundedCornerShape(24.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .width(224.dp)
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Text(
+                                text = "歌词样式",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = colors.textPrimary
+                            )
+                            Text(
+                                text = "字号 ${(lyricFontScale * 100).toInt()}%",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = colors.textSecondary
+                            )
+                            Slider(
+                                value = lyricFontScale,
+                                onValueChange = onLyricFontScaleChange,
+                                valueRange = LYRIC_FONT_SCALE_RANGE
+                            )
+                            Text(
+                                text = "高亮色",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = colors.textSecondary
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                LYRIC_ACCENT_SWATCHES.forEachIndexed { index, swatch ->
+                                    val resolvedSwatchColor = if (swatch == Color.Unspecified) {
+                                        colors.accent
+                                    } else {
+                                        swatch
+                                    }
+                                    Surface(
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .clickable { onLyricAccentChange(index) },
+                                        shape = RoundedCornerShape(14.dp),
+                                        color = resolvedSwatchColor,
+                                        border = androidx.compose.foundation.BorderStroke(
+                                            width = if (lyricHighlightColor == resolvedSwatchColor) 2.dp else 1.dp,
+                                            color = if (lyricHighlightColor == resolvedSwatchColor) {
+                                                colors.textPrimary
+                                            } else {
+                                                colors.glassBorder
+                                            }
+                                        )
+                                    ) {}
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
