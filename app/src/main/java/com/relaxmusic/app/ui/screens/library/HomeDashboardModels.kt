@@ -1,37 +1,75 @@
 package com.relaxmusic.app.ui.screens.library
 
-import com.relaxmusic.app.domain.model.Song
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.History
+import androidx.compose.material.icons.rounded.LibraryMusic
+import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.ui.graphics.vector.ImageVector
+import com.relaxmusic.app.ui.screens.nowplaying.HomePlaybackSummary
+
+data class HomeRecentPreview(
+    val id: String,
+    val title: String,
+    val artist: String
+)
+
+data class HomeQuickAction(
+    val destinationLabel: String,
+    val subtitle: String,
+    val icon: ImageVector
+)
 
 data class HomeDashboardModel(
-    val continueTitle: String,
-    val continueSubtitle: String,
-    val continueProgress: Float,
-    val showRecentSection: Boolean,
-    val recentSongs: List<Song>,
-    val recentSubtitle: String
+    val heroTitle: String,
+    val heroSubtitle: String,
+    val heroProgress: Float,
+    val heroMeta: String,
+    val recentSongs: List<HomeRecentPreview>,
+    val quickActions: List<HomeQuickAction>,
+    val utilityStatusText: String
 )
 
 internal fun buildHomeDashboardModel(
     libraryState: LibraryUiState,
-    currentSong: Song?,
-    isPlaying: Boolean,
-    playbackProgress: Float
+    homePlaybackSummary: HomePlaybackSummary
 ): HomeDashboardModel {
-    val recentSongs = libraryState.recentSongs.ifEmpty { libraryState.historySongs }.take(5)
+    val currentSong = homePlaybackSummary.currentSong
+    val recentSongs = libraryState.recentSongs
+        .ifEmpty { libraryState.historySongs }
+        .take(6)
+        .map { song ->
+            HomeRecentPreview(
+                id = song.id,
+                title = song.title,
+                artist = song.artist
+            )
+        }
+
     return HomeDashboardModel(
-        continueTitle = currentSong?.title ?: "还没有开始播放",
-        continueSubtitle = when {
+        heroTitle = currentSong?.title ?: "继续播放",
+        heroSubtitle = when {
             currentSong == null -> "从曲库中选择一首歌开始"
-            isPlaying -> currentSong.artist
+            homePlaybackSummary.isPlaying -> "${currentSong.artist} · 正在播放"
             else -> "${currentSong.artist} · 已暂停"
         },
-        continueProgress = if (currentSong != null) playbackProgress.coerceIn(0f, 1f) else 0f,
-        showRecentSection = recentSongs.isNotEmpty(),
+        heroProgress = when {
+            currentSong == null -> 0f
+            homePlaybackSummary.isPlaying -> 0.68f
+            else -> 0.32f
+        },
+        heroMeta = currentSong?.album ?: "你的本地音乐，按最近状态直接续播",
         recentSongs = recentSongs,
-        recentSubtitle = when {
-            recentSongs.isEmpty() -> "播放后会出现在这里"
-            recentSongs.size == 1 -> recentSongs.first().title
-            else -> recentSongs.take(2).joinToString(" / ") { it.title }
+        quickActions = listOf(
+            HomeQuickAction("全部歌曲", "${libraryState.totalSongCount} 首", Icons.Rounded.MusicNote),
+            HomeQuickAction("歌单", "${libraryState.playlists.size} 个", Icons.Rounded.LibraryMusic),
+            HomeQuickAction("收藏", "${libraryState.favoriteSongs.size} 首", Icons.Rounded.Favorite),
+            HomeQuickAction("历史", "${libraryState.historySongs.size} 条", Icons.Rounded.History)
+        ),
+        utilityStatusText = if (libraryState.totalSongCount == 0) {
+            "还没有导入本地音乐"
+        } else {
+            "已导入 ${libraryState.totalSongCount} 首，${libraryState.librarySummaryText.ifBlank { libraryState.statusMessage }}"
         }
     )
 }

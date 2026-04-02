@@ -21,6 +21,7 @@ import com.relaxmusic.app.ui.screens.library.LibraryUiState
 import com.relaxmusic.app.ui.screens.library.LibraryViewModel
 import com.relaxmusic.app.ui.screens.library.PlaylistDetailScreen
 import com.relaxmusic.app.ui.screens.library.PlaylistsScreen
+import com.relaxmusic.app.ui.screens.nowplaying.HomePlaybackSummary
 import com.relaxmusic.app.ui.screens.nowplaying.NowPlayingScreen
 import com.relaxmusic.app.ui.screens.nowplaying.PlayerViewModel
 import com.relaxmusic.app.ui.screens.settings.SettingsScreen
@@ -34,6 +35,7 @@ fun RelaxMusicNavGraph(
     libraryViewModel: LibraryViewModel,
     playerViewModel: PlayerViewModel,
     settingsViewModel: SettingsViewModel,
+    homePlaybackSummary: HomePlaybackSummary,
     onPickFolder: () -> Unit,
     onOpenTimer: () -> Unit,
     onExportBackup: () -> Unit,
@@ -74,9 +76,7 @@ fun RelaxMusicNavGraph(
         composable(RelaxMusicDestination.Home.route) {
             LibraryScreen(
                 state = libraryUiState,
-                currentSong = playerViewModel.miniPlayerSong,
-                isPlaying = playerViewModel.miniPlayerIsPlaying,
-                playbackProgress = playerViewModel.miniPlayerProgress,
+                homePlaybackSummary = homePlaybackSummary,
                 onPickFolder = onPickFolder,
                 onRemoveFolder = libraryViewModel::removeFolder,
                 onRescan = libraryViewModel::rescan,

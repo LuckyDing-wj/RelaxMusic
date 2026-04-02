@@ -22,6 +22,7 @@ data class LibraryUiState(
     val scanning: Boolean = false,
     val query: String = "",
     val statusMessage: String = "请选择一个本地音乐目录开始。",
+    val librarySummaryText: String = "",
     val errorMessage: String? = null,
     val currentSongId: String? = null
 )

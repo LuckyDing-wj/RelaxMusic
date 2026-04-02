@@ -1,7 +1,6 @@
 package com.relaxmusic.app.ui.screens.nowplaying
 
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloatAsState
@@ -12,6 +11,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccessTime
@@ -65,18 +66,17 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlin.math.absoluteValue
-import com.relaxmusic.app.data.local.EmbeddedArtworkReader
 import com.relaxmusic.app.domain.model.LyricLine
 import com.relaxmusic.app.domain.model.PlayMode
 import com.relaxmusic.app.domain.model.Song
+import com.relaxmusic.app.ui.components.PremiumSurface
 import com.relaxmusic.app.ui.theme.RelaxMusicColors
 import com.relaxmusic.app.utils.TimeFormatter
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 enum class CenterContentMode {
     ARTWORK,
@@ -145,7 +145,11 @@ fun NowPlayingScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(colors.backgroundBrush)
+    ) {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             containerColor = Color.Transparent,
@@ -229,6 +233,7 @@ private fun NowPlayingHeader(
     title: String,
     onBack: (() -> Unit)?
 ) {
+    val colors = RelaxMusicColors
     Row(
         modifier = modifier,
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -236,12 +241,12 @@ private fun NowPlayingHeader(
     ) {
         if (onBack != null) {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "back")
+                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "back", tint = colors.textPrimary)
             }
         } else {
             Box(modifier = Modifier.size(48.dp))
         }
-        Text(title, style = MaterialTheme.typography.titleLarge)
+        Text(title, style = MaterialTheme.typography.titleLarge, color = colors.textPrimary)
         Box(modifier = Modifier.size(48.dp))
     }
 }
@@ -298,27 +303,34 @@ private fun BottomPlaybackDock(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        TrackMetaSection(
-            currentSong = currentSong,
-            isPlaying = isPlaying
-        )
+        PremiumSurface(strong = true) {
+            Column(
+                modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                TrackMetaSection(
+                    currentSong = currentSong,
+                    isPlaying = isPlaying
+                )
 
-        ProgressSection(
-            progress = progress,
-            progressMs = progressMs,
-            durationMs = durationMs,
-            onChangeProgress = onChangeProgress
-        )
+                ProgressSection(
+                    progress = progress,
+                    progressMs = progressMs,
+                    durationMs = durationMs,
+                    onChangeProgress = onChangeProgress
+                )
 
-        PlaybackControlsSection(
-            playMode = playMode,
-            isPlaying = isPlaying,
-            onCyclePlayMode = onCyclePlayMode,
-            onPrevious = onPrevious,
-            onTogglePlay = onTogglePlay,
-            onNext = onNext,
-            onOpenTimer = onOpenTimer
-        )
+                PlaybackControlsSection(
+                    playMode = playMode,
+                    isPlaying = isPlaying,
+                    onCyclePlayMode = onCyclePlayMode,
+                    onPrevious = onPrevious,
+                    onTogglePlay = onTogglePlay,
+                    onNext = onNext,
+                    onOpenTimer = onOpenTimer
+                )
+            }
+        }
     }
 }
 
@@ -376,13 +388,10 @@ private fun ArtworkContent(
     colors: com.relaxmusic.app.ui.theme.RelaxMusicColorPalette
 ) {
     val context = LocalContext.current
-    val artworkReader = remember { EmbeddedArtworkReader() }
+    val density = LocalDensity.current
+    val artworkCache = remember { ArtworkBitmapCache() }
     val albumArtBitmap by produceState<Bitmap?>(initialValue = null, currentSong?.uri) {
-        value = withContext(Dispatchers.IO) {
-            artworkReader.read(context, currentSong?.uri)?.let { bytes ->
-                BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-            }
-        }
+        value = artworkCache.load(context, currentSong?.uri, with(density) { 320.dp.roundToPx() })
     }
     val albumArtScale = if (isPlaying) {
         rememberInfiniteTransition(label = "album-art").animateFloat(
@@ -404,32 +413,52 @@ private fun ArtworkContent(
         contentAlignment = Alignment.Center
     ) {
         if (albumArtBitmap != null) {
-            Image(
-                bitmap = albumArtBitmap!!.asImageBitmap(),
-                contentDescription = currentSong?.title ?: "当前歌曲封面",
+            PremiumSurface(
                 modifier = Modifier
-                    .fillMaxWidth(0.9f)
-                    .aspectRatio(1f)
+                    .fillMaxWidth(0.92f)
                     .scale(albumArtScale),
-                contentScale = ContentScale.Crop
-            )
-        } else {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                strong = true,
+                fillWidth = false,
+                shape = RoundedCornerShape(34.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Rounded.MusicNote,
-                    contentDescription = "暂无封面",
-                    tint = colors.accent
+                Image(
+                    bitmap = albumArtBitmap!!.asImageBitmap(),
+                    contentDescription = currentSong?.title ?: "当前歌曲封面",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(1f),
+                    contentScale = ContentScale.Crop
                 )
-                Text(
-                    text = currentSong?.album?.takeIf { it.isNotBlank() } ?: "暂无内嵌封面",
-                    color = colors.textSecondary,
-                    style = MaterialTheme.typography.titleMedium,
-                    textAlign = TextAlign.Center
-                )
+            }
+        } else {
+            PremiumSurface(
+                modifier = Modifier.fillMaxWidth(0.92f),
+                strong = true,
+                fillWidth = false,
+                shape = RoundedCornerShape(34.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(1f)
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.MusicNote,
+                        contentDescription = "暂无封面",
+                        tint = colors.accent,
+                        modifier = Modifier.size(56.dp)
+                    )
+                    Text(
+                        text = currentSong?.album?.takeIf { it.isNotBlank() } ?: "暂无内嵌封面",
+                        color = colors.textSecondary,
+                        style = MaterialTheme.typography.titleMedium,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(top = 12.dp)
+                    )
+                }
             }
         }
     }
@@ -448,7 +477,12 @@ private fun LyricsContent(
         LaunchedEffect(currentLyricIndex, lyrics.size) {
             if (currentLyricIndex >= 0 && lyrics.isNotEmpty()) {
                 val targetIndex = (currentLyricIndex - 1).coerceAtLeast(0)
-                lyricListState.animateScrollToItem(index = targetIndex)
+                val farJump = (lyricListState.firstVisibleItemIndex - targetIndex).absoluteValue > 4
+                if (farJump) {
+                    lyricListState.scrollToItem(index = targetIndex)
+                } else {
+                    lyricListState.animateScrollToItem(index = targetIndex)
+                }
             }
         }
 
@@ -480,25 +514,38 @@ private fun LyricsContent(
                     animationSpec = tween(durationMillis = 220),
                     label = "lyric-alpha"
                 )
-                val animatedScale by animateFloatAsState(
-                    targetValue = targetScale,
-                    animationSpec = spring(dampingRatio = 0.9f, stiffness = 500f),
-                    label = "lyric-scale"
-                )
-                val animatedColor by animateColorAsState(
-                    targetValue = if (distance == 0) colors.accent else colors.textSecondary.copy(alpha = 0.9f),
-                    animationSpec = tween(durationMillis = 220),
-                    label = "lyric-color"
-                )
+                val shouldAnimateEmphasis = distance <= 1
+                val renderedScale = if (shouldAnimateEmphasis) {
+                    animateFloatAsState(
+                        targetValue = targetScale,
+                        animationSpec = spring(dampingRatio = 0.9f, stiffness = 500f),
+                        label = "lyric-scale"
+                    ).value
+                } else {
+                    targetScale
+                }
+                val renderedColor = if (shouldAnimateEmphasis) {
+                    animateColorAsState(
+                        targetValue = if (distance == 0) {
+                            colors.accent
+                        } else {
+                            colors.textSecondary.copy(alpha = 0.9f)
+                        },
+                        animationSpec = tween(durationMillis = 220),
+                        label = "lyric-color"
+                    ).value
+                } else {
+                    colors.textSecondary.copy(alpha = 0.9f)
+                }
 
                 Text(
                     text = line.text,
-                    color = animatedColor,
+                    color = renderedColor,
                     style = if (distance == 0) MaterialTheme.typography.titleLarge else MaterialTheme.typography.bodyLarge,
                     modifier = Modifier
                         .fillMaxWidth()
                         .alpha(animatedAlpha)
-                        .scale(animatedScale),
+                        .scale(renderedScale),
                     textAlign = TextAlign.Center
                 )
             }

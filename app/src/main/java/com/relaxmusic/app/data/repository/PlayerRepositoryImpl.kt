@@ -275,4 +275,8 @@ class PlayerRepositoryImpl(
         progressJob?.cancel()
         progressJob = null
     }
+
+    internal fun forceUpdateForTest() {
+        updateState()
+    }
 }

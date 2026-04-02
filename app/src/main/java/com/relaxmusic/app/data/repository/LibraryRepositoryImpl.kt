@@ -35,6 +35,10 @@ class LibraryRepositoryImpl(
         return songDao.observeAll().map { list -> list.map { it.toDomain() } }
     }
 
+    override fun searchSongs(query: String): Flow<List<Song>> {
+        return songDao.search(query).map { list -> list.map { it.toDomain() } }
+    }
+
     override fun observeFavorites(): Flow<List<Song>> {
         return songDao.observeFavorites().map { list -> list.map { it.toDomain() } }
     }
@@ -115,7 +119,7 @@ class LibraryRepositoryImpl(
             withContext(Dispatchers.IO) {
                 val existingById = songDao.getAll().associateBy { it.id }
                 val songs = saved
-                    .flatMap { uri -> directoryScanner.scan(context, Uri.parse(uri)) }
+                    .flatMap { uri -> directoryScanner.scan(context, Uri.parse(uri), existingById) }
                     .distinctBy { it.id }
                     .map { song ->
                         val existing = existingById[song.id]

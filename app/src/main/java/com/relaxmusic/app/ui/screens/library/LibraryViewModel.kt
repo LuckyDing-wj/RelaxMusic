@@ -79,8 +79,17 @@ class LibraryViewModel(
         )
     }
 
+    private val visibleSongs = effectiveQuery.flatMapLatest { queryKeyword ->
+        if (queryKeyword.isBlank()) {
+            libraryRepository.observeSongs()
+        } else {
+            libraryRepository.searchSongs(queryKeyword)
+        }
+    }
+
     val state = combine(
         libraryRepository.observeSongs(),
+        visibleSongs,
         libraryRepository.observeFavorites(),
         libraryRepository.observeRecentlyPlayed(),
         libraryRepository.observePlaybackHistory(),
@@ -88,28 +97,16 @@ class LibraryViewModel(
         libraryRepository.observeArtists(),
         libraryRepository.observePlaylists(),
         transientState,
-        effectiveQuery
     ) { values ->
         val songs = values[0] as List<com.relaxmusic.app.domain.model.Song>
-        val favorites = values[1] as List<com.relaxmusic.app.domain.model.Song>
-        val recentSongs = values[2] as List<com.relaxmusic.app.domain.model.Song>
-        val historySongs = values[3] as List<com.relaxmusic.app.domain.model.Song>
-        val albums = values[4] as List<com.relaxmusic.app.domain.model.Album>
-        val artists = values[5] as List<com.relaxmusic.app.domain.model.Artist>
-        val playlists = values[6] as List<com.relaxmusic.app.domain.model.Playlist>
-        val transient = values[7] as LibraryTransientState
-        val queryKeyword = (values[8] as String).lowercase()
-
-        val filteredSongs = if (queryKeyword.isBlank()) {
-            songs
-        } else {
-            songs.filter {
-                it.title.lowercase().contains(queryKeyword) ||
-                    it.artist.lowercase().contains(queryKeyword) ||
-                    it.album.lowercase().contains(queryKeyword) ||
-                    it.fileName.lowercase().contains(queryKeyword)
-            }
-        }
+        val filteredSongs = values[1] as List<com.relaxmusic.app.domain.model.Song>
+        val favorites = values[2] as List<com.relaxmusic.app.domain.model.Song>
+        val recentSongs = values[3] as List<com.relaxmusic.app.domain.model.Song>
+        val historySongs = values[4] as List<com.relaxmusic.app.domain.model.Song>
+        val albums = values[5] as List<com.relaxmusic.app.domain.model.Album>
+        val artists = values[6] as List<com.relaxmusic.app.domain.model.Artist>
+        val playlists = values[7] as List<com.relaxmusic.app.domain.model.Playlist>
+        val transient = values[8] as LibraryTransientState
 
         LibraryUiState(
             libraryPathLabel = transient.path,
@@ -119,7 +116,7 @@ class LibraryViewModel(
             allSongs = songs,
             songs = filteredSongs,
             favoriteSongs = favorites,
-            recentSongs = recentSongs.filter { it.lastPlayedAt != null },
+            recentSongs = recentSongs.filter { it.lastPlayedAt != null }.take(6),
             historySongs = historySongs,
             albums = albums,
             artists = artists,
@@ -128,6 +125,12 @@ class LibraryViewModel(
             scanning = transient.isScanning,
             query = transient.queryValue,
             statusMessage = transient.status,
+            librarySummaryText = when {
+                songs.isEmpty() -> "还没有导入本地音乐"
+                transient.isScanning && transient.scanningDirectoryLabel != null ->
+                    "正在扫描 ${transient.scanningDirectoryLabel}"
+                else -> transient.status
+            },
             errorMessage = transient.error,
             currentSongId = transient.playingId
         )

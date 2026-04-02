@@ -80,11 +80,23 @@ private class DefaultAppContainer(application: Application) : AppContainer {
         }
     }
 
+    private val migration4To5 = object : Migration(4, 5) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_songs_title ON songs(title)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_songs_artist ON songs(artist)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_songs_album ON songs(album)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_songs_is_favorite ON songs(is_favorite)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_songs_last_played_at ON songs(last_played_at)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_playback_history_song_id ON playback_history(song_id)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_playback_history_played_at ON playback_history(played_at)")
+        }
+    }
+
     private val database: AppDatabase = Room.databaseBuilder(
         application,
         AppDatabase::class.java,
         "relax_music.db"
-    ).addMigrations(migration1To2, migration2To3, migration3To4).build()
+    ).addMigrations(migration1To2, migration2To3, migration3To4, migration4To5).build()
 
     override val musicPlayerController: MusicPlayerController = MusicPlayerController(application)
 

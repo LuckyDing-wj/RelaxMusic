@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.Flow
 
 interface LibraryRepository {
     fun observeSongs(): Flow<List<Song>>
+    fun searchSongs(query: String): Flow<List<Song>>
     fun observeFavorites(): Flow<List<Song>>
     fun observeRecentlyPlayed(limit: Int = 10): Flow<List<Song>>
     fun observePlaybackHistory(limit: Int = 100): Flow<List<Song>>

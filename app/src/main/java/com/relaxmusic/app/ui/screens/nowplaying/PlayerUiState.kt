@@ -21,6 +21,12 @@ data class PlayerUiState(
 )
 
 @Immutable
+data class HomePlaybackSummary(
+    val currentSong: Song? = null,
+    val isPlaying: Boolean = false
+)
+
+@Immutable
 data class NowPlayingArtworkUiState(
     val currentSong: Song? = null,
     val isPlaying: Boolean = false

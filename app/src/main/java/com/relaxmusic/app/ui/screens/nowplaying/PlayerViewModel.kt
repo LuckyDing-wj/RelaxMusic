@@ -17,6 +17,9 @@ import kotlinx.coroutines.launch
 class PlayerViewModel(
     private val playerRepository: PlayerRepository
 ) : ViewModel() {
+    var homePlaybackSummary by mutableStateOf(HomePlaybackSummary())
+        private set
+
     var uiState by mutableStateOf(PlayerUiState())
         private set
 
@@ -35,15 +38,6 @@ class PlayerViewModel(
     var nowPlayingControlsUiState by mutableStateOf(NowPlayingControlsUiState())
         private set
 
-    var miniPlayerSong by mutableStateOf<Song?>(null)
-        private set
-
-    var miniPlayerIsPlaying by mutableStateOf(false)
-        private set
-
-    var miniPlayerProgress by mutableStateOf(0f)
-        private set
-
     private var sleepTimerJob: Job? = null
 
     init {
@@ -51,13 +45,6 @@ class PlayerViewModel(
             playerRepository.playbackState.collectLatest { state ->
                 val sleepRemaining = uiState.sleepTimerRemaining
                 updateUiStatesFromPlaybackState(state, sleepRemaining)
-                miniPlayerSong = state.currentSong
-                miniPlayerIsPlaying = state.isPlaying
-                miniPlayerProgress = if (state.durationMs > 0) {
-                    state.progressMs.coerceAtLeast(0L).toFloat() / state.durationMs.toFloat()
-                } else {
-                    0f
-                }
             }
         }
     }
@@ -134,12 +121,23 @@ class PlayerViewModel(
     }
 
     private fun updateUiStatesFromPlaybackState(state: PlaybackState, sleepTimerRemaining: Long) {
+        homePlaybackSummary = HomePlaybackSummary(
+            currentSong = state.currentSong,
+            isPlaying = state.isPlaying
+        )
         uiState = state.toUiState(sleepTimerRemaining)
         nowPlayingArtworkUiState = state.toArtworkUiState()
         nowPlayingLyricsUiState = state.toLyricsUiState()
         nowPlayingTrackUiState = state.toTrackUiState()
         nowPlayingProgressUiState = state.toProgressUiState()
         nowPlayingControlsUiState = state.toControlsUiState(sleepTimerRemaining)
+    }
+
+    internal fun forceUpdateForTest() {
+        updateUiStatesFromPlaybackState(
+            state = playerRepository.playbackState.value,
+            sleepTimerRemaining = uiState.sleepTimerRemaining
+        )
     }
 
     private fun PlaybackState.toUiState(sleepTimerRemaining: Long): PlayerUiState {

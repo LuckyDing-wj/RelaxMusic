@@ -114,7 +114,7 @@ fun RelaxMusicApp() {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Brush.verticalGradient(listOf(colors.appBackgroundStart, colors.appBackgroundEnd)))
+                .background(colors.backgroundBrush)
         ) {
             Scaffold(
                 containerColor = Color.Transparent,
@@ -133,6 +133,7 @@ fun RelaxMusicApp() {
                         libraryViewModel = libraryViewModel,
                         playerViewModel = playerViewModel,
                         settingsViewModel = settingsViewModel,
+                        homePlaybackSummary = playerViewModel.homePlaybackSummary,
                         onPickFolder = { pickFolderLauncher.launch(null) },
                         onOpenTimer = { timerSheetVisible = true },
                         onExportBackup = {
