@@ -10,7 +10,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -28,11 +27,6 @@ fun EmptyLibraryView(
         Text(
             text = "先选择一个本地音乐目录",
             style = MaterialTheme.typography.titleLarge
-        )
-        Text(
-            text = "V1 将通过 Android 的目录授权扫描该目录及所有子目录中的音乐文件。",
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.Center
         )
         Button(onClick = onPickFolder) {
             Text("选择目录")

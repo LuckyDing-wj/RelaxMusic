@@ -118,12 +118,7 @@ fun RelaxMusicNavGraph(
                 onToggleFavorite = libraryViewModel::toggleFavorite,
                 onAddSongToPlaylist = libraryViewModel::addSongToPlaylist,
                 showBackButton = false,
-                emptyMessageAction = onPickFolder,
-                supportingText = if (libraryUiState.totalSongCount == 0) {
-                    "导入歌曲后会直接显示在这里。"
-                } else {
-                    "${libraryUiState.totalSongCount} 首歌曲"
-                }
+                emptyMessageAction = onPickFolder
             )
         }
 
@@ -275,8 +270,7 @@ fun RelaxMusicNavGraph(
                 onToggleFavorite = libraryViewModel::toggleFavorite,
                 onAddSongToPlaylist = libraryViewModel::addSongToPlaylist,
                 showBackButton = true,
-                emptyMessageAction = { navigateToTopLevel(TopLevelDestination.LISTS) },
-                supportingText = "按播放时间倒序展示，每次播放都会保留一条记录。"
+                emptyMessageAction = { navigateToTopLevel(TopLevelDestination.LISTS) }
             )
         }
 

@@ -59,7 +59,6 @@ fun LibraryScreen(
         item {
             PremiumSectionHeader(
                 title = "RelaxMusic",
-                subtitle = "你的本地音乐，按最近状态直接续播",
                 onOpenSettings = onOpenSettings
             )
         }
@@ -95,11 +94,6 @@ fun LibraryScreen(
 
         item {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    text = "曲库与工具",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = colors.textPrimary
-                )
                 ScanProgressCard(
                     currentFolderLabel = state.libraryPathLabel,
                     songCount = state.totalSongCount,

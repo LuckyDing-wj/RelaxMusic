@@ -36,14 +36,7 @@ fun RecentPlaybackStrip(
             color = colors.textPrimary
         )
         if (items.isEmpty()) {
-            PremiumSurface(shape = RoundedCornerShape(20.dp)) {
-                Text(
-                    text = "开始播放后，这里会显示你最近听过的内容。",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = colors.textSecondary,
-                    modifier = Modifier.padding(16.dp)
-                )
-            }
+            PremiumSurface(shape = RoundedCornerShape(20.dp)) {}
         } else {
             LazyRow(
                 contentPadding = PaddingValues(0.dp),
@@ -74,12 +67,6 @@ fun RecentPlaybackStrip(
                                 color = colors.textSecondary,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                text = "查看历史",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = colors.accent,
-                                modifier = Modifier.padding(top = 8.dp)
                             )
                         }
                     }

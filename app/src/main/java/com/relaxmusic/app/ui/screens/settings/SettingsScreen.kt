@@ -63,8 +63,7 @@ fun SettingsScreen(
         }
 
         SettingsCard(title = "音乐目录") {
-            Text(state.libraryFolderLabel, color = colors.textSecondary)
-            Button(onClick = onPickFolder, modifier = Modifier.padding(top = 12.dp)) {
+            Button(onClick = onPickFolder) {
                 Text("添加目录")
             }
             if (state.libraryFolders.isNotEmpty()) {
@@ -118,13 +117,6 @@ fun SettingsScreen(
                         )
                     }
                 }
-            }
-        }
-
-        SettingsCard(title = "开发状态") {
-            Text(state.projectStageLabel, color = colors.textSecondary)
-            OutlinedButton(onClick = {}, modifier = Modifier.padding(top = 12.dp)) {
-                Text("下一步继续完善后台播放与体验")
             }
         }
 

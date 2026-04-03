@@ -40,17 +40,13 @@ fun ListsHubScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("列表", style = MaterialTheme.typography.headlineMedium)
-                Text("管理你的歌单、收藏与播放历史。", color = RelaxMusicColors.textSecondary)
-            }
+            Text("列表", style = MaterialTheme.typography.headlineMedium)
         }
 
         item {
             HubFeatureCard(
                 title = "歌单",
                 subtitle = if (playlistCount == 0) "还没有歌单" else "$playlistCount 个歌单",
-                supportingText = "创建、重命名和整理你自己的播放列表。",
                 icon = { Icon(Icons.Rounded.LibraryMusic, contentDescription = "playlists", tint = RelaxMusicColors.accent) },
                 onClick = onOpenPlaylists
             )
@@ -80,7 +76,6 @@ fun ListsHubScreen(
 private fun HubFeatureCard(
     title: String,
     subtitle: String,
-    supportingText: String,
     icon: @Composable () -> Unit,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -102,11 +97,6 @@ private fun HubFeatureCard(
             icon()
             Text(text = title, style = MaterialTheme.typography.titleLarge)
             Text(text = subtitle, style = MaterialTheme.typography.titleMedium, color = colors.accent)
-            Text(
-                text = supportingText,
-                style = MaterialTheme.typography.bodyMedium,
-                color = colors.textSecondary
-            )
         }
     }
 }

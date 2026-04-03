@@ -53,13 +53,8 @@ fun HomeHeroCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Text(
-                    text = "CONTINUE PLAYING",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = Color.White.copy(alpha = 0.75f)
-                )
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
                         text = model.heroTitle,
@@ -113,12 +108,6 @@ fun HomeHeroCard(
                                 contentDescription = null,
                                 tint = Color.White,
                                 modifier = Modifier.size(18.dp)
-                            )
-                            Text(
-                                text = if (isPlaying) "打开播放器" else "恢复播放",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = Color.White,
-                                modifier = Modifier
                             )
                         }
                     }

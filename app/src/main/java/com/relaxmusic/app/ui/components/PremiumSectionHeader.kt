@@ -20,7 +20,7 @@ import com.relaxmusic.app.ui.theme.RelaxMusicColors
 @Composable
 fun PremiumSectionHeader(
     title: String,
-    subtitle: String,
+    subtitle: String? = null,
     onOpenSettings: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -36,11 +36,13 @@ fun PremiumSectionHeader(
                 style = MaterialTheme.typography.displaySmall,
                 color = colors.textPrimary
             )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodyMedium,
-                color = colors.textSecondary
-            )
+            if (!subtitle.isNullOrBlank()) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colors.textSecondary
+                )
+            }
         }
         if (onOpenSettings != null) {
             IconButton(onClick = onOpenSettings, modifier = Modifier.size(42.dp)) {

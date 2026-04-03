@@ -305,12 +305,6 @@ private fun PlayerEmptyState(
                 text = "还没有开始播放",
                 style = MaterialTheme.typography.headlineSmall
             )
-            Text(
-                text = "从首页或列表选择一首歌开始",
-                style = MaterialTheme.typography.bodyLarge,
-                color = colors.textSecondary,
-                textAlign = TextAlign.Center
-            )
         }
     }
 }

@@ -7,6 +7,5 @@ data class SettingsUiState(
     val libraryFolders: List<String> = emptyList(),
     val libraryFolderLabels: Map<String, String> = emptyMap(),
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
-    val backupStatus: String? = null,
-    val projectStageLabel: String = "当前已接入扫描、真实播放、后台服务与通知栏控制，可继续做体验增强。"
+    val backupStatus: String? = null
 )

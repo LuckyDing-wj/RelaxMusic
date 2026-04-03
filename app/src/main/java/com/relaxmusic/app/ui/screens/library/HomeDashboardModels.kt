@@ -16,7 +16,6 @@ data class HomeRecentPreview(
 
 data class HomeQuickAction(
     val destinationLabel: String,
-    val subtitle: String,
     val icon: ImageVector
 )
 
@@ -49,7 +48,7 @@ internal fun buildHomeDashboardModel(
     return HomeDashboardModel(
         heroTitle = currentSong?.title ?: "继续播放",
         heroSubtitle = when {
-            currentSong == null -> "从曲库中选择一首歌开始"
+            currentSong == null -> ""
             homePlaybackSummary.isPlaying -> "${currentSong.artist} · 正在播放"
             else -> "${currentSong.artist} · 已暂停"
         },
@@ -58,13 +57,13 @@ internal fun buildHomeDashboardModel(
             homePlaybackSummary.isPlaying -> 0.68f
             else -> 0.32f
         },
-        heroMeta = currentSong?.album ?: "你的本地音乐，按最近状态直接续播",
+        heroMeta = currentSong?.album.orEmpty(),
         recentSongs = recentSongs,
         quickActions = listOf(
-            HomeQuickAction("全部歌曲", "${libraryState.totalSongCount} 首", Icons.Rounded.MusicNote),
-            HomeQuickAction("歌单", "${libraryState.playlists.size} 个", Icons.Rounded.LibraryMusic),
-            HomeQuickAction("收藏", "${libraryState.favoriteSongs.size} 首", Icons.Rounded.Favorite),
-            HomeQuickAction("历史", "${libraryState.historySongs.size} 条", Icons.Rounded.History)
+            HomeQuickAction("全部歌曲", Icons.Rounded.MusicNote),
+            HomeQuickAction("歌单", Icons.Rounded.LibraryMusic),
+            HomeQuickAction("收藏", Icons.Rounded.Favorite),
+            HomeQuickAction("历史", Icons.Rounded.History)
         ),
         utilityStatusText = if (libraryState.totalSongCount == 0) {
             "还没有导入本地音乐"

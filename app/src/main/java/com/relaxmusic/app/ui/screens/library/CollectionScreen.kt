@@ -25,7 +25,6 @@ import androidx.compose.ui.unit.sp
 import com.relaxmusic.app.domain.model.Playlist
 import com.relaxmusic.app.domain.model.Song
 import com.relaxmusic.app.ui.components.EmptyLibraryView
-import com.relaxmusic.app.ui.theme.RelaxMusicColors
 
 @Composable
 fun CollectionScreen(
@@ -38,10 +37,8 @@ fun CollectionScreen(
     onToggleFavorite: (String) -> Unit,
     onAddSongToPlaylist: (Long, String) -> Unit,
     showBackButton: Boolean = true,
-    emptyMessageAction: (() -> Unit)? = null,
-    supportingText: String? = null
+    emptyMessageAction: (() -> Unit)? = null
 ) {
-    val colors = RelaxMusicColors
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -63,13 +60,6 @@ fun CollectionScreen(
                     fontWeight = FontWeight.Bold,
                     fontSize = 20.sp
                 )
-            )
-        }
-        if (supportingText != null) {
-            Text(
-                supportingText,
-                style = MaterialTheme.typography.bodySmall,
-                color = colors.textSecondary
             )
         }
 
