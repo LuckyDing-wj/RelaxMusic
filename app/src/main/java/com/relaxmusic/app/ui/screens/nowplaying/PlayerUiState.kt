@@ -23,7 +23,8 @@ data class PlayerUiState(
 @Immutable
 data class HomePlaybackSummary(
     val currentSong: Song? = null,
-    val isPlaying: Boolean = false
+    val isPlaying: Boolean = false,
+    val progress: Float = 0f
 )
 
 @Immutable

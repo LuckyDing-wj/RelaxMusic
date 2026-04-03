@@ -121,9 +121,14 @@ class PlayerViewModel(
     }
 
     private fun updateUiStatesFromPlaybackState(state: PlaybackState, sleepTimerRemaining: Long) {
+        val safeDuration = state.durationMs.coerceAtLeast(0L)
+        val safeProgress = state.progressMs.coerceAtLeast(0L)
+        val summaryProgress = if (safeDuration > 0) safeProgress.toFloat() / safeDuration.toFloat() else 0f
+
         homePlaybackSummary = HomePlaybackSummary(
             currentSong = state.currentSong,
-            isPlaying = state.isPlaying
+            isPlaying = state.isPlaying,
+            progress = summaryProgress
         )
         uiState = state.toUiState(sleepTimerRemaining)
         nowPlayingArtworkUiState = state.toArtworkUiState()

@@ -54,8 +54,7 @@ internal fun buildHomeDashboardModel(
         },
         heroProgress = when {
             currentSong == null -> 0f
-            homePlaybackSummary.isPlaying -> 0.68f
-            else -> 0.32f
+            else -> homePlaybackSummary.progress.coerceIn(0f, 1f)
         },
         heroMeta = currentSong?.album.orEmpty(),
         recentSongs = recentSongs,
