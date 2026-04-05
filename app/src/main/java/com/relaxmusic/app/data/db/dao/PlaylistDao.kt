@@ -44,6 +44,9 @@ interface PlaylistDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addSongToPlaylist(entity: PlaylistSongEntity)
 
+    @Query("SELECT playlist_id FROM playlist_songs WHERE song_id = :songId")
+    fun observePlaylistIdsForSong(songId: String): Flow<List<Long>>
+
     @Query(
         """
         SELECT s.* FROM songs s

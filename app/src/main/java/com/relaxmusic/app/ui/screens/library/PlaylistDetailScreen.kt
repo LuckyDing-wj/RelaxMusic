@@ -134,27 +134,12 @@ fun PlaylistDetailScreen(
     }
 
     if (adding && playlist != null) {
-        AlertDialog(
-            onDismissRequest = { adding = false },
-            title = { Text("添加到 ${playlist.name}") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    allSongs.filterNot { existing -> playlistSongs.any { it.id == existing.id } }.take(10).forEach { song ->
-                        TextButton(onClick = {
-                            onAddSong(song.id)
-                            adding = false
-                        }) {
-                            Text(song.title, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                        }
-                    }
-                }
-            },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = { adding = false }) {
-                    Text("关闭")
-                }
-            }
+        PlaylistSongSelectionSheet(
+            playlist = playlist,
+            allSongs = allSongs,
+            existingSongIds = playlistSongs.map { it.id }.toSet(),
+            onDismiss = { adding = false },
+            onAddSong = onAddSong
         )
     }
 

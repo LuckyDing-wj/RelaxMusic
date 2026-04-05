@@ -1,5 +1,6 @@
 package com.relaxmusic.app.ui.screens.library
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -16,7 +17,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -25,6 +29,8 @@ import androidx.compose.ui.unit.sp
 import com.relaxmusic.app.domain.model.Playlist
 import com.relaxmusic.app.domain.model.Song
 import com.relaxmusic.app.ui.components.EmptyLibraryView
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
 @Composable
 fun CollectionScreen(
@@ -35,10 +41,16 @@ fun CollectionScreen(
     onBack: () -> Unit,
     onSongClick: (Song) -> Unit,
     onToggleFavorite: (String) -> Unit,
+    observePlaylistIdsForSong: (String) -> Flow<Set<Long>>,
     onAddSongToPlaylist: (Long, String) -> Unit,
     showBackButton: Boolean = true,
     emptyMessageAction: (() -> Unit)? = null
 ) {
+    var selectedSongForPlaylist by remember { mutableStateOf<Song?>(null) }
+    val selectedPlaylistIds by remember(selectedSongForPlaylist?.id) {
+        selectedSongForPlaylist?.id?.let(observePlaylistIdsForSong) ?: flowOf(emptySet())
+    }.collectAsStateWithLifecycle(initialValue = emptySet())
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -94,10 +106,20 @@ fun CollectionScreen(
                         playlists = playlists,
                         onClick = { onSongClick(song) },
                         onToggleFavorite = { onToggleFavorite(song.id) },
-                        onAddSongToPlaylist = onAddSongToPlaylist
+                        onAddToPlaylist = { selectedSongForPlaylist = song }
                     )
                 }
             }
         }
+    }
+
+    selectedSongForPlaylist?.let { song ->
+        SongPlaylistSelectionSheet(
+            song = song,
+            playlists = playlists,
+            selectedPlaylistIds = selectedPlaylistIds,
+            onDismiss = { selectedSongForPlaylist = null },
+            onAddSongToPlaylist = onAddSongToPlaylist
+        )
     }
 }

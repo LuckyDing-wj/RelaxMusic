@@ -209,6 +209,10 @@ class LibraryViewModel(
         return libraryRepository.observePlaylistSongs(playlistId)
     }
 
+    fun observePlaylistIdsForSong(songId: String): Flow<Set<Long>> {
+        return libraryRepository.observePlaylistIdsForSong(songId)
+    }
+
     fun rescan() {
         viewModelScope.launch {
             scanning.value = true

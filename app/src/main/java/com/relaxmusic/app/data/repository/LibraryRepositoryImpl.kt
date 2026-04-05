@@ -77,6 +77,10 @@ class LibraryRepositoryImpl(
         return playlistDao.observePlaylistSongs(playlistId).map { list -> list.map { it.toDomain() } }
     }
 
+    override fun observePlaylistIdsForSong(songId: String): Flow<Set<Long>> {
+        return playlistDao.observePlaylistIdsForSong(songId).map { it.toSet() }
+    }
+
     override suspend fun getSavedLibraryUri(): String? {
         return getSavedLibraryUris().firstOrNull()
     }

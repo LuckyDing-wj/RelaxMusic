@@ -116,6 +116,7 @@ fun RelaxMusicNavGraph(
                 onBack = {},
                 onSongClick = { song -> playSong(song, libraryUiState.allSongs) },
                 onToggleFavorite = libraryViewModel::toggleFavorite,
+                observePlaylistIdsForSong = libraryViewModel::observePlaylistIdsForSong,
                 onAddSongToPlaylist = libraryViewModel::addSongToPlaylist,
                 showBackButton = false,
                 emptyMessageAction = onPickFolder
@@ -132,6 +133,7 @@ fun RelaxMusicNavGraph(
                 onQueryChange = libraryViewModel::onQueryChange,
                 onSongClick = { song -> playSong(song, libraryUiState.songs) },
                 onToggleFavorite = libraryViewModel::toggleFavorite,
+                observePlaylistIdsForSong = libraryViewModel::observePlaylistIdsForSong,
                 onAddSongToPlaylist = libraryViewModel::addSongToPlaylist
             )
         }
@@ -170,6 +172,7 @@ fun RelaxMusicNavGraph(
                 onBack = { navController.navigateUp() },
                 onSongClick = { song -> playSong(song, album?.songs.orEmpty()) },
                 onToggleFavorite = libraryViewModel::toggleFavorite,
+                observePlaylistIdsForSong = libraryViewModel::observePlaylistIdsForSong,
                 onAddSongToPlaylist = libraryViewModel::addSongToPlaylist
             )
         }
@@ -201,6 +204,7 @@ fun RelaxMusicNavGraph(
                 onBack = { navController.navigateUp() },
                 onSongClick = { song -> playSong(song, artist?.songs.orEmpty()) },
                 onToggleFavorite = libraryViewModel::toggleFavorite,
+                observePlaylistIdsForSong = libraryViewModel::observePlaylistIdsForSong,
                 onAddSongToPlaylist = libraryViewModel::addSongToPlaylist
             )
         }
@@ -254,6 +258,7 @@ fun RelaxMusicNavGraph(
                 onBack = { navigateBackOrTopLevel(TopLevelDestination.LISTS) },
                 onSongClick = { song -> playSong(song, libraryUiState.favoriteSongs) },
                 onToggleFavorite = libraryViewModel::toggleFavorite,
+                observePlaylistIdsForSong = libraryViewModel::observePlaylistIdsForSong,
                 onAddSongToPlaylist = libraryViewModel::addSongToPlaylist,
                 emptyMessageAction = { navigateToTopLevel(TopLevelDestination.LISTS) }
             )
@@ -268,6 +273,7 @@ fun RelaxMusicNavGraph(
                 onBack = { navigateBackOrTopLevel(TopLevelDestination.LISTS) },
                 onSongClick = { song -> playSong(song, libraryUiState.historySongs) },
                 onToggleFavorite = libraryViewModel::toggleFavorite,
+                observePlaylistIdsForSong = libraryViewModel::observePlaylistIdsForSong,
                 onAddSongToPlaylist = libraryViewModel::addSongToPlaylist,
                 showBackButton = true,
                 emptyMessageAction = { navigateToTopLevel(TopLevelDestination.LISTS) }

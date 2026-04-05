@@ -16,6 +16,7 @@ interface LibraryRepository {
     fun observeArtists(): Flow<List<Artist>>
     fun observePlaylists(): Flow<List<Playlist>>
     fun observePlaylistSongs(playlistId: Long): Flow<List<Song>>
+    fun observePlaylistIdsForSong(songId: String): Flow<Set<Long>>
     suspend fun getSavedLibraryUris(): List<String>
     suspend fun getSavedLibraryUri(): String?
     suspend fun saveLibraryUri(uri: String)
